@@ -1,4 +1,5 @@
 #include "SpriteAnimation.h"
+#include "../Constants.h"
 
 SpriteAnimation::SpriteAnimation(std::vector<SDL_Texture*> frames,
                                  float fps, bool loop)
@@ -33,6 +34,7 @@ void SpriteAnimation::render(SDL_Renderer* renderer,
     float tw = w, th = h;
     if (tw == 0 || th == 0) {
         SDL_GetTextureSize(tex, &tw, &th);
+        tw *= SPRITE_SCALE; th *= SPRITE_SCALE;
     }
     SDL_FRect dst = {x, y, tw, th};
     if (angle != 0.0)

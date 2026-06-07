@@ -31,6 +31,8 @@ public:
     float axisX() const { return m_axisX; }
     float axisY() const { return m_axisY; }
 
+    int pressedPowerUpSlot() const { return m_pressedPowerUpSlot; }
+
 private:
     InputManager() = default;
     InputManager(const InputManager&) = delete;
@@ -41,6 +43,8 @@ private:
     std::unordered_map<Action, bool> m_held;
     std::unordered_map<Action, bool> m_pressed;
     std::unordered_map<Action, bool> m_released;
+
+    int   m_pressedPowerUpSlot = 0;
 
     // Touch state
     float m_touchStartX = 0, m_touchStartY = 0;

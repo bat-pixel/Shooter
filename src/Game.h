@@ -6,7 +6,7 @@
 #include <memory>
 
 #include "entities/Player.h"
-#include "entities/Meteor.h"
+#include "entities/Boss.h"
 #include "managers/BulletManager.h"
 #include "managers/EnemyWaveManager.h"
 #include "managers/CollisionManager.h"
@@ -41,7 +41,7 @@ private:
     void renderGameOver();
 
     void spawnExplosion(float x, float y);
-    void spawnMeteors(float dt);
+    void spawnBoss();
     void advanceStage();
     void resetPlayer();
     void renderText(const std::string& text, float x, float y,
@@ -56,27 +56,26 @@ private:
     int m_score = 0;
     int m_level = 1;
 
-    // Stage tally
     float m_tallyTimer        = 0;
     int   m_stageKillCount    = 0;
     int   m_stageTotalEnemies = 0;
     bool  m_tallyBonusAdded   = false;
 
-    // Entities / managers
-    std::unique_ptr<Player>         m_player;
-    std::unique_ptr<Background>     m_background;
-    std::unique_ptr<HUD>            m_hud;
-    BulletManager                   m_bullets;
-    EnemyWaveManager                m_waves;
-    CollisionManager                m_collision;
+    std::unique_ptr<Player>     m_player;
+    std::unique_ptr<Boss>       m_boss;
+    std::unique_ptr<Background> m_background;
+    std::unique_ptr<HUD>        m_hud;
+    BulletManager               m_bullets;
+    EnemyWaveManager            m_waves;
+    CollisionManager            m_collision;
 
-    std::vector<std::unique_ptr<Meteor>>    m_meteors;
-    std::vector<Explosion>                  m_explosions;
+    bool m_bossSpawned = false;
 
-    float m_meteorTimer    = 0;
-    float m_meteorInterval = 3.0f;
-
+    std::vector<Explosion>   m_explosions;
     std::vector<SDL_Texture*> m_explosionFrames;
-    SDL_Texture* m_menuBg         = nullptr;
-    SDL_Texture* m_bgTextures[4]  = {};  // indexed by StageDef::bgIndex
+
+    SDL_Texture* m_menuBg = nullptr;
+    SDL_Texture* m_playerBulletTex = nullptr;
+    SDL_Texture* m_enemyBulletTex  = nullptr;
+    SDL_Texture* m_bossTex         = nullptr;
 };

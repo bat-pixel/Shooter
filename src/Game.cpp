@@ -26,7 +26,7 @@ bool Game::init() {
     }
 
     m_window = SDL_CreateWindow("1942",
-                                 480, 640,
+                                 360, 640,
                                  SDL_WINDOW_RESIZABLE);
     if (!m_window) { SDL_Log("CreateWindow: %s", SDL_GetError()); return false; }
 
@@ -43,62 +43,55 @@ bool Game::init() {
 
     auto& am = AssetManager::get();
 
-    // Background textures for each campaign tier
-    m_bgTextures[0] = am.texture("assets/Backgrounds/darkPurple.png");
-    m_bgTextures[1] = am.texture("assets/Backgrounds/blue.png");
-    m_bgTextures[2] = am.texture("assets/Backgrounds/purple.png");
-    m_bgTextures[3] = am.texture("assets/Backgrounds/black.png");
-
-    m_background = std::make_unique<Background>(m_bgTextures[0], 70.f);
-
-    // Explosion frames
-    m_explosionFrames.reserve(20);
-    for (int i = 0; i < 20; ++i) {
-        char buf[64];
-        SDL_snprintf(buf, sizeof(buf), "assets/PNG/Effects/fire%02d.png", i);
-        m_explosionFrames.push_back(am.texture(buf));
-    }
-
-    // Player — use PixelLab P-38 if available, fall back to original
-    SDL_Texture* shipTex = am.texture("assets/PNG/playerShip_p38.png");
-    if (!shipTex) shipTex = am.texture("assets/PNG/playerShip1_orange.png");
-
-    std::array<SDL_Texture*, 3> damageTex = {
-        am.texture("assets/PNG/Damage/playerShip1_damage1.png"),
-        am.texture("assets/PNG/Damage/playerShip1_damage2.png"),
-        am.texture("assets/PNG/Damage/playerShip1_damage3.png"),
+    // Five scrolling background panels — cycle seamlessly as stages progress
+    std::vector<SDL_Texture*> bgPanels = {
+        am.texture("assets/PNG/Backgrounds/bg_ocean.png"),
+        am.texture("assets/PNG/Backgrounds/bg_foam.png"),
+        am.texture("assets/PNG/Backgrounds/bg_atoll.png"),
+        am.texture("assets/PNG/Backgrounds/bg_island.png"),
+        am.texture("assets/PNG/Backgrounds/bg_coast.png"),
     };
-    m_player = std::make_unique<Player>(
-        LOGICAL_W * 0.5f - 33, LOGICAL_H - 120.f,
-        shipTex, damageTex);
+    m_menuBg = bgPanels[0];
+    m_background = std::make_unique<Background>(bgPanels, 80.f);
 
-    // Enemy textures — use PixelLab Zero for SMALL if available
-    SDL_Texture* zeroTex = am.texture("assets/PNG/Enemies/enemyZero.png");
+    // Explosion sprite (single frame, scaled to 64px at render)
+    SDL_Texture* explosionTex = am.texture("assets/PNG/Effects/explosion.png");
+    if (explosionTex) m_explosionFrames.push_back(explosionTex);
+
+    // Player
+    SDL_Texture* shipTex    = am.texture("assets/PNG/playerShip_p38.png");
+    SDL_Texture* wingmanTex = am.texture("assets/PNG/playerWingman.png");
+    std::array<SDL_Texture*, 3> damageTex = {nullptr, nullptr, nullptr};
+    m_player = std::make_unique<Player>(
+        LOGICAL_W * 0.5f - 24, LOGICAL_H - 120.f,
+        shipTex, damageTex, wingmanTex);
+
+    // Enemy textures — Zero variants + Betty bombers
+    SDL_Texture* zeroTex  = am.texture("assets/PNG/Enemies/enemyZero.png");
+    SDL_Texture* zeroRed  = am.texture("assets/PNG/Enemies/enemyZero_red.png");
+    SDL_Texture* zeroBlue = am.texture("assets/PNG/Enemies/enemyZero_blue.png");
+    SDL_Texture* betty    = am.texture("assets/PNG/Enemies/enemyBetty.png");
+    SDL_Texture* nell     = am.texture("assets/PNG/Enemies/enemyNell.png");
     SDL_Texture* black[5], *red[5], *blue[5], *green[5];
     for (int i = 0; i < 5; ++i) {
-        char buf[64];
-        SDL_snprintf(buf, sizeof(buf), "assets/PNG/Enemies/enemyBlack%d.png", i + 1);
-        black[i] = zeroTex ? zeroTex : am.texture(buf);
-        SDL_snprintf(buf, sizeof(buf), "assets/PNG/Enemies/enemyRed%d.png", i + 1);
-        red[i] = am.texture(buf);
-        SDL_snprintf(buf, sizeof(buf), "assets/PNG/Enemies/enemyBlue%d.png", i + 1);
-        blue[i] = am.texture(buf);
-        SDL_snprintf(buf, sizeof(buf), "assets/PNG/Enemies/enemyGreen%d.png", i + 1);
-        green[i] = am.texture(buf);
+        black[i] = zeroTex  ? zeroTex  : nullptr;
+        red[i]   = zeroRed  ? zeroRed  : zeroTex;
+        blue[i]  = zeroBlue ? zeroBlue : zeroTex;
+        green[i] = betty    ? betty    : nell;
     }
-    SDL_Texture* ufoTex = am.texture("assets/PNG/ufoRed.png");
-    m_waves.loadTextures(black, red, blue, green, ufoTex);
+    m_waves.loadTextures(black, red, blue, green, nell);
 
-    // HUD
-    TTF_Font* font = am.font("assets/Bonus/kenvector_future.ttf", 16);
-    SDL_Texture* lifeIcon = am.texture("assets/PNG/UI/playerLife1_orange.png");
-    std::array<SDL_Texture*, 10> numerals;
-    for (int i = 0; i < 10; ++i) {
-        char buf[64];
-        SDL_snprintf(buf, sizeof(buf), "assets/PNG/UI/numeral%d.png", i);
-        numerals[i] = am.texture(buf);
-    }
-    m_hud = std::make_unique<HUD>(font, lifeIcon, numerals);
+    // Bullet sprites
+    m_playerBulletTex = am.texture("assets/PNG/Lasers/playerBullet.png");
+    m_enemyBulletTex  = am.texture("assets/PNG/Lasers/enemyBullet.png");
+
+    // Boss
+    m_bossTex = am.texture("assets/PNG/Enemies/bossAyako.png");
+
+    // HUD — use P-38 sprite as life icon
+    TTF_Font* font    = am.font("assets/Bonus/kenvector_future.ttf", 16);
+    SDL_Texture* lifeIcon = wingmanTex ? wingmanTex : shipTex;
+    m_hud = std::make_unique<HUD>(font, lifeIcon);
 
     // Collision callbacks
     m_collision.setCallbacks(
@@ -106,10 +99,9 @@ bool Game::init() {
         [this](float x, float y){ spawnExplosion(x, y); }
     );
 
-    m_menuBg = m_bgTextures[0];
+    // m_menuBg already set above
 
-    AudioManager::get().playMusic(
-        "assets/music/05_Main Theme v1 (633 Squadron) (SID Stereo).mp3");
+    AudioManager::get().playMusic("assets/sounds/bgm_menu.mp3");
 
     m_running = true;
     return true;
@@ -145,6 +137,22 @@ void Game::handleEvents() {
         m_player->setGodMode(!m_player->godMode());
     }
 
+    if (m_player && m_player->godMode()) {
+        static constexpr PowerUpType kSlots[] = {
+            PowerUpType::DOUBLE_SHOT, PowerUpType::SCREEN_WIPE,
+            PowerUpType::WINGMAN,     PowerUpType::FREEZE_BULLETS,
+            PowerUpType::EXTRA_LOOP,  PowerUpType::EXTRA_LIFE,
+            PowerUpType::SCORE_RED,   PowerUpType::YASHICHI,
+        };
+        int slot = input.pressedPowerUpSlot();
+        if (slot >= 1 && slot <= 8) {
+            PowerUpType pt = kSlots[slot - 1];
+            if      (pt == PowerUpType::SCORE_RED)  m_score += SCORE_POW_RED;
+            else if (pt == PowerUpType::YASHICHI)   m_score += SCORE_YASHICHI;
+            else m_player->applyPowerUp(pt);
+        }
+    }
+
     if (input.isPressed(Action::PAUSE)) {
         if (m_state == GameState::PLAYING)
             m_state = GameState::PAUSED;
@@ -158,6 +166,7 @@ void Game::handleEvents() {
         m_waves.resetKillStats();
         m_state = GameState::PLAYING;
         m_waves.startWave(m_level);
+        AudioManager::get().playMusic("assets/sounds/bgm_stage.mp3");
     }
 
     if (m_state == GameState::STAGE_TALLY && input.isPressed(Action::CONFIRM)) {
@@ -171,7 +180,8 @@ void Game::handleEvents() {
         m_state  = GameState::MENU;
         m_waves.clear();
         m_bullets.clear();
-        m_meteors.clear();
+        m_boss.reset();
+        m_bossSpawned = false;
         m_explosions.clear();
         resetPlayer();
     }
@@ -193,7 +203,7 @@ void Game::updatePlaying(float dt) {
     if (!m_player->isActive()) {
         StageManager::get().updateHighScore(m_score);
         m_state = GameState::GAMEOVER;
-        AudioManager::get().playSound("assets/Bonus/sfx_lose.ogg");
+        AudioManager::get().playSound("assets/sounds/game_over.mp3");
         return;
     }
 
@@ -211,47 +221,73 @@ void Game::updatePlaying(float dt) {
 
     // Player firing
     if (m_player->wantsToFire() && !m_player->isLooping()) {
-        SDL_Texture* laserTex = AssetManager::get().texture(
-            "assets/PNG/Lasers/laserBlue01.png");
-
         m_bullets.spawnPlayer(
             m_player->bounds().x + m_player->bounds().w * 0.5f - 5,
             m_player->bounds().y,
-            m_player->fireLevel(), laserTex);
-
-        // Wingman fire
+            m_player->fireLevel(), m_playerBulletTex);
         for (const auto& wm : m_player->wingmen()) {
             if (!wm.active) continue;
             m_bullets.spawnPlayer(
                 m_player->bounds().x + m_player->bounds().w * 0.5f + wm.offsetX,
-                m_player->bounds().y,
-                1, laserTex);
+                m_player->bounds().y, 1, m_playerBulletTex);
         }
-
-        AudioManager::get().playSound("assets/sounds/fire.mp3");
+        AudioManager::get().playSound("assets/sounds/shoot_player.mp3");
     }
 
     m_waves.update(dt);
 
-    // Enemy firing (blocked when bullet-frozen)
+    // Enemy firing
     if (!m_player->isBulletFrozen()) {
-        SDL_Texture* enemyLaser = AssetManager::get().texture(
-            "assets/PNG/Lasers/laserRed01.png");
+        static float enemyFireSoundTimer = 0;
+        enemyFireSoundTimer -= dt;
         for (auto& enemy : m_waves.enemies()) {
             if (!enemy->isActive()) continue;
             if (enemy->tryFire(dt)) {
                 m_bullets.spawnEnemy(
                     enemy->bounds().x + enemy->bounds().w * 0.5f,
                     enemy->bounds().y + enemy->bounds().h,
-                    0, ENEMY_BULLET_SPEED, enemyLaser);
+                    0, ENEMY_BULLET_SPEED, m_enemyBulletTex);
+                if (enemyFireSoundTimer <= 0) {
+                    AudioManager::get().playSound("assets/sounds/shoot_enemy.mp3");
+                    enemyFireSoundTimer = 0.12f;
+                }
             }
         }
     }
 
-    m_bullets.update(dt);
+    // Boss update + firing
+    if (m_boss && m_boss->isActive()) {
+        m_boss->update(dt);
+        if (!m_player->isBulletFrozen()) {
+            float bx, by, bvx, bvy;
+            if (m_boss->tryFire(bx, by, bvx, bvy)) {
+                m_bullets.spawnEnemy(bx, by, bvx, bvy, m_enemyBulletTex);
+                // Boss fires three-shot burst
+                m_bullets.spawnEnemy(bx, by, -bvx, bvy, m_enemyBulletTex);
+                m_bullets.spawnEnemy(bx, by, 0, bvy * 0.9f, m_enemyBulletTex);
+                AudioManager::get().playSound("assets/sounds/shoot_enemy.mp3");
+            }
+        }
+        // Boss vs player bullets collision
+        SDL_FRect bossBounds = m_boss->bounds();
+        for (auto& b : m_bullets.bullets()) {
+            if (!b.isActive() || b.owner() != BulletOwner::PLAYER) continue;
+            if (m_boss->collidesWithRect(b.bounds())) {
+                b.setActive(false);
+                if (m_boss->hit()) {
+                    for (int i = 0; i < 5; ++i)
+                        spawnExplosion(bossBounds.x + (i * 20.f), bossBounds.y + (i * 15.f));
+                    AudioManager::get().playSound("assets/sounds/explosion_large.mp3");
+                    m_score += 50000;
+                }
+            }
+        }
+        // Boss vs player
+        if (!m_player->isInvincible() && m_boss->collidesWithRect(m_player->bounds()))
+            m_player->hit();
+    }
 
-    spawnMeteors(dt);
-    for (auto& m : m_meteors) m->update(dt);
+    m_bullets.update(dt);
 
     for (auto& ex : m_explosions) ex.anim.update(dt);
     m_explosions.erase(
@@ -259,22 +295,24 @@ void Game::updatePlaying(float dt) {
             [](const Explosion& ex){ return ex.anim.isFinished(); }),
         m_explosions.end());
 
-    m_collision.check(*m_player, m_bullets, m_waves, m_meteors);
+    m_collision.check(*m_player, m_bullets, m_waves);
 
-    m_meteors.erase(
-        std::remove_if(m_meteors.begin(), m_meteors.end(),
-            [](const auto& m){ return !m->isActive(); }),
-        m_meteors.end());
+    bool waveDone = m_waves.isWaveCleared();
+    bool bossDone = !m_boss || !m_boss->isActive();
 
-    if (m_waves.isWaveCleared()) {
-        m_stageKillCount    = m_waves.killCount();
-        m_stageTotalEnemies = m_waves.totalSpawned();
-        m_tallyTimer        = 0;
-        m_tallyBonusAdded   = false;
-        m_bullets.clear();
-        AudioManager::get().playMusic(
-            "assets/music/07_Stage Clear (SID Stereo) (1).mp3", 1);
-        m_state = GameState::STAGE_TALLY;
+    if (waveDone) {
+        if (StageManager::get().currentDef().hasBoss && !m_bossSpawned) {
+            spawnBoss();
+        } else if (bossDone) {
+            m_stageKillCount    = m_waves.killCount();
+            m_stageTotalEnemies = m_waves.totalSpawned();
+            m_tallyTimer        = 0;
+            m_tallyBonusAdded   = false;
+            m_bullets.clear();
+            m_boss.reset();
+            m_bossSpawned = false;
+            m_state = GameState::STAGE_TALLY;
+        }
     }
 }
 
@@ -303,11 +341,11 @@ void Game::render() {
 void Game::renderPlaying() {
     m_background->render(m_renderer);
     m_waves.render(m_renderer);
+    if (m_boss) m_boss->render(m_renderer);
     m_bullets.render(m_renderer);
-    for (auto& m : m_meteors) m->render(m_renderer);
     m_player->render(m_renderer);
     for (auto& ex : m_explosions)
-        ex.anim.render(m_renderer, ex.x, ex.y, 64 * SPRITE_SCALE, 64 * SPRITE_SCALE);
+        ex.anim.render(m_renderer, ex.x, ex.y, 48.f, 48.f);
 
     m_hud->render(m_renderer, m_score, m_player->lives(),
                   StageManager::get().currentStage(),
@@ -325,7 +363,7 @@ void Game::renderMenu() {
         SDL_RenderTexture(m_renderer, m_menuBg, nullptr, &dst);
     }
     SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 160);
-    SDL_FRect box = {60, 220, 360, 160};
+    SDL_FRect box = {20, 220, 320, 160};
     SDL_RenderFillRect(m_renderer, &box);
 
     renderText("1942", LOGICAL_W * 0.5f - 50, 235, {255, 255, 255, 255}, 36);
@@ -352,7 +390,7 @@ void Game::renderStageTally() {
         SDL_RenderTexture(m_renderer, m_menuBg, nullptr, &dst);
     }
     SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 180);
-    SDL_FRect box = {40, 160, 400, 300};
+    SDL_FRect box = {10, 160, 340, 300};
     SDL_RenderFillRect(m_renderer, &box);
 
     int stage = StageManager::get().currentStage();
@@ -363,23 +401,24 @@ void Game::renderStageTally() {
     int pct = (m_stageTotalEnemies > 0)
               ? (m_stageKillCount * 100 / m_stageTotalEnemies) : 0;
     std::string pctTxt = "SHOOTING DOWN  " + std::to_string(pct) + "%";
-    renderText(pctTxt, 70, 230, {255, 255, 255, 255}, 16);
+    renderText(pctTxt, 30, 230, {255, 255, 255, 255}, 16);
 
     // Loop bonus
     int loopBonus = m_player->loopsRemaining() * SCORE_LOOP_BONUS;
     std::string loopTxt = "LOOP BONUS  " + std::to_string(m_player->loopsRemaining())
                         + " x 1000 = " + std::to_string(loopBonus);
-    renderText(loopTxt, 70, 270, {255, 255, 255, 255}, 16);
+    renderText(loopTxt, 30, 270, {255, 255, 255, 255}, 16);
 
     // Perfect bonus
     if (pct == 100)
-        renderText("SPECIAL BONUS  50000", 70, 310, {255, 200, 0, 255}, 16);
+        renderText("SPECIAL BONUS  50000", 30, 310, {255, 200, 0, 255}, 16);
 
     // Add bonuses exactly once
     if (!m_tallyBonusAdded) {
         m_tallyBonusAdded = true;
         m_score += loopBonus;
         if (pct == 100) m_score += SCORE_PERFECT_BONUS;
+        AudioManager::get().playSound("assets/sounds/stage_clear.mp3");
     }
 
     renderText("PRESS ENTER TO CONTINUE", LOGICAL_W * 0.5f - 110, 390,
@@ -403,49 +442,30 @@ void Game::spawnExplosion(float x, float y) {
         SpriteAnimation(m_explosionFrames, 24.0f, false),
         x, y
     });
+    AudioManager::get().playSound("assets/sounds/explosion_small.mp3");
 }
 
-void Game::spawnMeteors(float dt) {
-    m_meteorTimer += dt;
-    if (m_meteorTimer < m_meteorInterval) return;
-    m_meteorTimer = 0;
-
-    static const char* bigMeteors[] = {
-        "assets/PNG/Meteors/meteorBrown_big1.png",
-        "assets/PNG/Meteors/meteorBrown_big2.png",
-        "assets/PNG/Meteors/meteorGrey_big1.png",
-        "assets/PNG/Meteors/meteorGrey_big2.png",
-    };
-    int idx  = std::rand() % 4;
-    float vx = (std::rand() % 60) - 30.f;
-    float vy = METEOR_SPEED_MIN + std::rand() % (int)(METEOR_SPEED_MAX - METEOR_SPEED_MIN);
-    float x  = (float)(std::rand() % (LOGICAL_W - 80));
-
-    SDL_Texture* tex = AssetManager::get().texture(bigMeteors[idx]);
-    m_meteors.push_back(
-        std::make_unique<Meteor>(x, -110.f, vx, vy, MeteorSize::BIG, tex));
+void Game::spawnBoss() {
+    m_bossSpawned = true;
+    m_boss = std::make_unique<Boss>(m_bossTex);
+    AudioManager::get().playSound("assets/sounds/boss_warning.mp3");
+    AudioManager::get().playMusic("assets/sounds/bgm_boss.mp3");
 }
 
 void Game::advanceStage() {
-    // Add loop bonus and reset tally state to avoid double-counting
-    // (bonus already added in renderStageTally on first render, so only add here)
-    // Note: to avoid double-adding, we track that separately. For simplicity,
-    // loop bonus and perfect bonus are only added once in renderStageTally.
-
     StageManager::get().advance();
     ++m_level;
-    m_meteorInterval = std::max(1.0f, m_meteorInterval - 0.2f);
 
-    // Switch background for new stage
-    int bgIdx = StageManager::get().currentDef().bgIndex;
-    m_background->setTexture(m_bgTextures[bgIdx]);
+    // Background cycles continuously through all panels — no per-stage switch needed
 
     m_player->resetForNewStage();
     m_waves.resetKillStats();
     m_waves.startWave(m_level);
 
-    AudioManager::get().playMusic(
-        "assets/music/05_Main Theme v1 (633 Squadron) (SID Stereo).mp3");
+    const char* music = StageManager::get().currentDef().hasBoss
+        ? "assets/sounds/bgm_boss.mp3"
+        : "assets/sounds/bgm_stage.mp3";
+    AudioManager::get().playMusic(music);
 
     m_state = GameState::PLAYING;
 }
@@ -474,11 +494,11 @@ void Game::renderText(const std::string& text, float x, float y,
 // -----------------------------------------------------------------------
 void Game::shutdown() {
     m_player.reset();
+    m_boss.reset();
     m_background.reset();
     m_hud.reset();
     m_waves.clear();
     m_bullets.clear();
-    m_meteors.clear();
     m_explosions.clear();
     m_explosionFrames.clear();
 

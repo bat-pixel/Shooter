@@ -7,6 +7,7 @@ InputManager& InputManager::get() {
 }
 
 void InputManager::endFrame() {
+    m_pressedPowerUpSlot = 0;
     m_pressed.clear();
     m_released.clear();
     // Rebuild axis from held state (keyboard)
@@ -50,6 +51,10 @@ void InputManager::handleKey(SDL_Keycode key, bool down) {
     case SDLK_RETURN:             a = Action::CONFIRM;     break;
     case SDLK_BACKSPACE:          a = Action::BACK;        break;
     case SDLK_T:                  a = Action::TRAINING;    break;
+    case SDLK_1: case SDLK_2: case SDLK_3: case SDLK_4:
+    case SDLK_5: case SDLK_6: case SDLK_7: case SDLK_8:
+        if (down) m_pressedPowerUpSlot = (int)(key - SDLK_0);
+        return;
     default: mapped = false; break;
     }
     if (!mapped) return;

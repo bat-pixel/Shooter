@@ -14,7 +14,7 @@ void AudioManager::init(const std::string& basePath) {
         return;
     }
 
-    m_mixer = MIX_CreateMixerDevice(0, nullptr);
+    m_mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
     if (!m_mixer) {
         SDL_Log("MIX_CreateMixerDevice failed: %s", SDL_GetError());
         return;

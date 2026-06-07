@@ -17,7 +17,7 @@ Player::Player(float x, float y,
     if (shipTex) {
         float tw, th;
         SDL_GetTextureSize(shipTex, &tw, &th);
-        m_w = tw * SPRITE_SCALE; m_h = th * SPRITE_SCALE;
+        m_w = tw * PLANE_SCALE; m_h = th * PLANE_SCALE;
     }
     m_wingmen[0].offsetX = -30.f;
     m_wingmen[1].offsetX =  30.f;
@@ -75,7 +75,7 @@ void Player::hit() {
     if (m_invincible || m_godMode) return;
     if (m_shieldLevel > 0) {
         --m_shieldLevel;
-        AudioManager::get().playSound("assets/Bonus/sfx_shieldDown.ogg");
+        AudioManager::get().playSound("assets/sounds/powerup.mp3");
         return;
     }
     --m_lives;
@@ -92,40 +92,40 @@ void Player::doLoop() {
     m_loopTimer      = 0;
     m_invincible     = true;
     --m_loopsRemaining;
-    AudioManager::get().playSound("assets/sounds/loop.mp3");
+    AudioManager::get().playSound("assets/sounds/loop_dive.mp3");
 }
 
 void Player::applyPowerUp(PowerUpType type) {
     switch (type) {
     case PowerUpType::DOUBLE_SHOT:
         m_fireLevel = std::min(m_fireLevel + 1, 3);
-        AudioManager::get().playSound("assets/Bonus/sfx_twoTone.ogg");
+        AudioManager::get().playSound("assets/sounds/powerup.mp3");
         break;
     case PowerUpType::SCREEN_WIPE:
         m_screenWipe = true;
-        AudioManager::get().playSound("assets/Bonus/sfx_twoTone.ogg");
+        AudioManager::get().playSound("assets/sounds/powerup.mp3");
         break;
     case PowerUpType::WINGMAN:
         if (!m_wingmen[0].active)      m_wingmen[0].active = true;
         else if (!m_wingmen[1].active) m_wingmen[1].active = true;
-        AudioManager::get().playSound("assets/Bonus/sfx_twoTone.ogg");
+        AudioManager::get().playSound("assets/sounds/powerup.mp3");
         break;
     case PowerUpType::FREEZE_BULLETS:
         m_bulletFreezeTimer = 3.0f;
-        AudioManager::get().playSound("assets/Bonus/sfx_twoTone.ogg");
+        AudioManager::get().playSound("assets/sounds/powerup.mp3");
         break;
     case PowerUpType::EXTRA_LOOP:
         ++m_loopsRemaining;
-        AudioManager::get().playSound("assets/Bonus/sfx_twoTone.ogg");
+        AudioManager::get().playSound("assets/sounds/powerup.mp3");
         break;
     case PowerUpType::EXTRA_LIFE:
         m_lives = std::min(m_lives + 1, PLAYER_MAX_LIVES);
-        AudioManager::get().playSound("assets/Bonus/sfx_shieldUp.ogg");
+        AudioManager::get().playSound("assets/sounds/extra_life.mp3");
         break;
     case PowerUpType::SCORE_RED:
     case PowerUpType::YASHICHI:
         // Score handled by CollisionManager callback
-        AudioManager::get().playSound("assets/Bonus/sfx_twoTone.ogg");
+        AudioManager::get().playSound("assets/sounds/powerup.mp3");
         break;
     }
 }
@@ -164,18 +164,18 @@ void Player::render(SDL_Renderer* renderer) {
     float ry = m_y + (m_h - rh) * 0.5f;
 
     SDL_FRect dst = {rx, ry, rw, rh};
-    SDL_RenderTexture(renderer, tex, nullptr, &dst);
+    SDL_RenderTextureRotated(renderer, tex, nullptr, &dst, 0.0, nullptr, SDL_FLIP_VERTICAL);
 
     // Wingmen
     if (m_wingmanTex) {
         float ww, wh;
         SDL_GetTextureSize(m_wingmanTex, &ww, &wh);
-        ww *= SPRITE_SCALE; wh *= SPRITE_SCALE;
+        ww *= PLANE_SCALE; wh *= PLANE_SCALE;
         for (const auto& wm : m_wingmen) {
             if (!wm.active) continue;
             SDL_FRect wd = {m_x + m_w * 0.5f + wm.offsetX - ww * 0.5f,
                             m_y + m_h * 0.5f - wh * 0.5f, ww, wh};
-            SDL_RenderTexture(renderer, m_wingmanTex, nullptr, &wd);
+            SDL_RenderTextureRotated(renderer, m_wingmanTex, nullptr, &wd, 0.0, nullptr, SDL_FLIP_VERTICAL);
         }
     }
 }

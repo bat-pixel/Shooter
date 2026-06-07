@@ -2,6 +2,7 @@
 #include "../Constants.h"
 #include "../AssetManager.h"
 #include <cstdlib>
+#include <algorithm>
 
 void EnemyWaveManager::loadTextures(SDL_Texture* black[5],
                                     SDL_Texture* red[5],
@@ -23,26 +24,16 @@ void EnemyWaveManager::startWave(int waveNumber) {
     m_formations.clear();
     m_enemyFormation.clear();
     m_powerUps.clear();
+    m_pendingQueue.clear();
+    m_pendingIdx   = 0;
+    m_waveTimer    = 0;
+    m_aliveCount   = 0;
+    m_totalSpawned = 0;
 
-    int rows  = 2 + waveNumber / 3;
-    int cols  = 5;
-    m_aliveCount   = rows * cols;
-    m_totalSpawned = m_aliveCount;
-
-    EnemyPattern pat = (waveNumber % 3 == 0) ? EnemyPattern::DIVE
-                     : (waveNumber % 2 == 0) ? EnemyPattern::SINE
-                     :                         EnemyPattern::STRAIGHT;
-
-    SDL_Texture** set = m_enemyRed;
-    switch (waveNumber % 4) {
-    case 0: set = m_enemyBlack; break;
-    case 1: set = m_enemyRed;   break;
-    case 2: set = m_enemyBlue;  break;
-    case 3: set = m_enemyGreen; break;
-    }
-
-    float spacingX = (LOGICAL_W - 60.f) / cols;
-    float spacingY = 48.f;
+    // Number of formations scales with wave; earlier waves get enough to feel substantial
+    int numFormations = std::min(4 + waveNumber / 2, 14);
+    // Interval between formations shortens slightly as difficulty increases
+    float interval = std::max(3.5f - waveNumber * 0.06f, 2.0f);
 
     static const PowerUpType powCycle[] = {
         PowerUpType::DOUBLE_SHOT,
@@ -51,52 +42,93 @@ void EnemyWaveManager::startWave(int waveNumber) {
         PowerUpType::FREEZE_BULLETS,
         PowerUpType::EXTRA_LIFE,
     };
-    int powIdx = 0;
 
-    for (int r = 0; r < rows; ++r) {
-        Formation f;
-        f.isRedSquadron = (r % 2 == 0);
-        if (f.isRedSquadron) {
-            f.powType = powCycle[powIdx % 5];
-            ++powIdx;
+    SDL_Texture** sets[4] = { m_enemyBlack, m_enemyRed, m_enemyBlue, m_enemyGreen };
+
+    for (int f = 0; f < numFormations; ++f) {
+        PendingFormation pf;
+        pf.delay        = f * interval;
+        pf.cols         = 5;
+        pf.isRedSquadron= (f % 2 == 0);
+        pf.powType      = powCycle[f % 5];
+        pf.type         = EnemyType::SMALL;
+
+        switch (f % 3) {
+        case 0: pf.pattern = EnemyPattern::STRAIGHT; break;
+        case 1: pf.pattern = EnemyPattern::SINE;     break;
+        case 2: pf.pattern = EnemyPattern::DIVE;     break;
         }
 
-        for (int c = 0; c < cols; ++c) {
-            float tx = 30.f + c * spacingX;
-            float ty = -50.f - r * spacingY;
-            int   tidx = std::min(r % 5, 4);
+        SDL_Texture** set = sets[f % 4];
+        for (int i = 0; i < 5; ++i) pf.texSet[i] = set[i];
 
-            auto e = std::make_unique<Enemy>(
-                tx, ty - 200.f,
-                EnemyType::SMALL, pat, set[tidx]);
-            e->setFormationTarget(tx, ty);
-
-            int enemyIdx = (int)m_enemies.size();
-            f.enemyIndices.push_back(enemyIdx);
-            m_enemies.push_back(std::move(e));
-        }
-
-        m_formations.push_back(std::move(f));
+        m_pendingQueue.push_back(pf);
     }
 
-    m_enemyFormation.resize(m_enemies.size(), -1);
-    for (int fi = 0; fi < (int)m_formations.size(); ++fi)
-        for (int idx : m_formations[fi].enemyIndices)
-            m_enemyFormation[idx] = fi;
-
-    // Occasionally add a UFO on higher waves (not part of formations)
+    // Add a UFO mid-wave on higher difficulties
     if (waveNumber > 3 && m_ufoTex) {
-        float ux = 30.f + (std::rand() % (LOGICAL_W - 60));
-        auto u = std::make_unique<Enemy>(
-            ux, -60.f, EnemyType::UFO, EnemyPattern::SINE, m_ufoTex);
-        m_enemies.push_back(std::move(u));
-        m_enemyFormation.push_back(-1);  // UFO has no formation
-        ++m_aliveCount;
-        ++m_totalSpawned;
+        PendingFormation uf;
+        uf.delay         = (numFormations / 2) * interval;
+        uf.cols          = 1;
+        uf.isRedSquadron = false;
+        uf.powType       = PowerUpType::SCORE_RED;
+        uf.pattern       = EnemyPattern::SINE;
+        uf.type          = EnemyType::UFO;
+        for (int i = 0; i < 5; ++i) uf.texSet[i] = m_ufoTex;
+        m_pendingQueue.push_back(uf);
+        // Sort so UFO fires at the right time
+        std::stable_sort(m_pendingQueue.begin(), m_pendingQueue.end(),
+            [](const PendingFormation& a, const PendingFormation& b){
+                return a.delay < b.delay;
+            });
     }
 }
 
+void EnemyWaveManager::spawnFormation(const PendingFormation& pf) {
+    int formIdx = (int)m_formations.size();
+    Formation f;
+    f.isRedSquadron = pf.isRedSquadron;
+    f.powType       = pf.powType;
+
+    if (pf.type == EnemyType::UFO) {
+        float ux = 30.f + (std::rand() % (LOGICAL_W - 60));
+        auto u = std::make_unique<Enemy>(ux, -60.f, EnemyType::UFO, EnemyPattern::SINE, pf.texSet[0]);
+        int idx = (int)m_enemies.size();
+        f.enemyIndices.push_back(idx);
+        m_enemies.push_back(std::move(u));
+        m_enemyFormation.push_back(formIdx);
+        ++m_aliveCount;
+        ++m_totalSpawned;
+    } else {
+        float spacingX = (LOGICAL_W - 60.f) / pf.cols;
+        for (int c = 0; c < pf.cols; ++c) {
+            float tx = 30.f + c * spacingX;
+            float ty = -50.f;
+            auto e = std::make_unique<Enemy>(
+                tx, ty - 200.f, pf.type, pf.pattern, pf.texSet[c % 5]);
+            e->setFormationTarget(tx, ty);
+            int idx = (int)m_enemies.size();
+            f.enemyIndices.push_back(idx);
+            m_enemies.push_back(std::move(e));
+            m_enemyFormation.push_back(formIdx);
+            ++m_aliveCount;
+            ++m_totalSpawned;
+        }
+    }
+
+    m_formations.push_back(std::move(f));
+}
+
 void EnemyWaveManager::update(float dt) {
+    m_waveTimer += dt;
+
+    // Drip-spawn formations as their delay elapses
+    while (m_pendingIdx < (int)m_pendingQueue.size() &&
+           m_waveTimer >= m_pendingQueue[m_pendingIdx].delay) {
+        spawnFormation(m_pendingQueue[m_pendingIdx]);
+        ++m_pendingIdx;
+    }
+
     for (auto& e : m_enemies)  e->update(dt);
     for (auto& p : m_powerUps) p->update(dt);
 
@@ -116,12 +148,16 @@ void EnemyWaveManager::clear() {
     m_powerUps.clear();
     m_formations.clear();
     m_enemyFormation.clear();
+    m_pendingQueue.clear();
+    m_pendingIdx   = 0;
+    m_waveTimer    = 0;
     m_aliveCount   = 0;
     m_killCount    = 0;
     m_totalSpawned = 0;
 }
 
 bool EnemyWaveManager::isWaveCleared() const {
+    if (m_pendingIdx < (int)m_pendingQueue.size()) return false;
     for (const auto& e : m_enemies)
         if (e->isActive()) return false;
     return true;
@@ -140,7 +176,7 @@ void EnemyWaveManager::onEnemyKilled(Enemy* e, int enemyIdx) {
 
     for (int i : f.enemyIndices) {
         if (i < (int)m_enemies.size() && m_enemies[i]->isActive())
-            return;  // formation not fully cleared yet
+            return;
     }
 
     f.cleared = true;
@@ -152,17 +188,6 @@ void EnemyWaveManager::onEnemyKilled(Enemy* e, int enemyIdx) {
     m_powerUps.push_back(std::make_unique<PowerUp>(px, py, f.powType, tex));
 }
 
-SDL_Texture* EnemyWaveManager::getPowTexture(PowerUpType type) const {
-    auto& am = AssetManager::get();
-    switch (type) {
-    case PowerUpType::DOUBLE_SHOT:    return am.texture("assets/PNG/Power-ups/powerupGreen_bolt.png");
-    case PowerUpType::SCREEN_WIPE:    return am.texture("assets/PNG/Power-ups/powerupBlue.png");
-    case PowerUpType::WINGMAN:        return am.texture("assets/PNG/Power-ups/powerupYellow.png");
-    case PowerUpType::FREEZE_BULLETS: return am.texture("assets/PNG/Power-ups/powerupBlue_star.png");
-    case PowerUpType::EXTRA_LOOP:     return am.texture("assets/PNG/Power-ups/powerupGreen.png");
-    case PowerUpType::EXTRA_LIFE:     return am.texture("assets/PNG/Power-ups/powerupRed_bolt.png");
-    case PowerUpType::SCORE_RED:      return am.texture("assets/PNG/Power-ups/powerupRed.png");
-    case PowerUpType::YASHICHI:       return am.texture("assets/PNG/Power-ups/star_gold.png");
-    default:                          return nullptr;
-    }
+SDL_Texture* EnemyWaveManager::getPowTexture(PowerUpType /*type*/) const {
+    return AssetManager::get().texture("assets/PNG/Power-ups/powBox.png");
 }

@@ -2,8 +2,9 @@
 #include <string>
 
 constexpr float SPRITE_SCALE = 0.25f;
+constexpr float PLANE_SCALE  = 1.0f;  // PixelLab sprites — render at generated size
 
-constexpr int   LOGICAL_W    = 480;
+constexpr int   LOGICAL_W    = 360;   // 9:16 mobile-friendly canvas
 constexpr int   LOGICAL_H    = 640;
 constexpr int   TARGET_FPS   = 60;
 constexpr float MAX_DT       = 0.05f;   // cap to avoid spiral-of-death

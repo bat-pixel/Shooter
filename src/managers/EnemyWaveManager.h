@@ -12,6 +12,16 @@ struct Formation {
     PowerUpType      powType       = PowerUpType::DOUBLE_SHOT;
 };
 
+struct PendingFormation {
+    float        delay;          // seconds from wave start
+    int          cols;
+    EnemyPattern pattern;
+    EnemyType    type;
+    SDL_Texture* texSet[5];
+    bool         isRedSquadron;
+    PowerUpType  powType;
+};
+
 class EnemyWaveManager {
 public:
     EnemyWaveManager() = default;
@@ -39,12 +49,17 @@ public:
     void resetKillStats()    { m_killCount = 0; m_totalSpawned = 0; }
 
 private:
+    void spawnFormation(const PendingFormation& pf);
     SDL_Texture* getPowTexture(PowerUpType type) const;
 
     std::vector<std::unique_ptr<Enemy>>   m_enemies;
     std::vector<std::unique_ptr<PowerUp>> m_powerUps;
     std::vector<Formation>                m_formations;
     std::vector<int>                      m_enemyFormation;
+
+    std::vector<PendingFormation>         m_pendingQueue;
+    int                                   m_pendingIdx  = 0;
+    float                                 m_waveTimer   = 0;
 
     SDL_Texture* m_enemyBlack[5] = {};
     SDL_Texture* m_enemyRed[5]   = {};

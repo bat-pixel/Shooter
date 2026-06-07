@@ -22,7 +22,7 @@ Enemy::Enemy(float x, float y, EnemyType type, EnemyPattern pattern,
     if (tex) {
         float tw, th;
         SDL_GetTextureSize(tex, &tw, &th);
-        m_w = tw * SPRITE_SCALE; m_h = th * SPRITE_SCALE;
+        m_w = tw * PLANE_SCALE; m_h = th * PLANE_SCALE;
     }
 }
 

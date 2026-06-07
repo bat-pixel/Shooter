@@ -20,7 +20,7 @@ void Bullet::fire(float x, float y, float velX, float velY,
     if (tex) {
         float tw, th;
         SDL_GetTextureSize(tex, &tw, &th);
-        m_w = tw; m_h = th;
+        m_w = tw * PLANE_SCALE; m_h = th * PLANE_SCALE;
     }
 }
 

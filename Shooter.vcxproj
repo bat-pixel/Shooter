@@ -199,7 +199,7 @@ exit 0</Command>
     <ClCompile Include="src\entities\Player.cpp" />
     <ClCompile Include="src\entities\Enemy.cpp" />
     <ClCompile Include="src\entities\Bullet.cpp" />
-    <ClCompile Include="src\entities\Meteor.cpp" />
+    <ClCompile Include="src\entities\Boss.cpp" />
     <ClCompile Include="src\entities\PowerUp.cpp" />
     <ClCompile Include="src\managers\BulletManager.cpp" />
     <ClCompile Include="src\managers\EnemyWaveManager.cpp" />
@@ -219,7 +219,7 @@ exit 0</Command>
     <ClInclude Include="src\entities\Player.h" />
     <ClInclude Include="src\entities\Enemy.h" />
     <ClInclude Include="src\entities\Bullet.h" />
-    <ClInclude Include="src\entities\Meteor.h" />
+    <ClInclude Include="src\entities\Boss.h" />
     <ClInclude Include="src\entities\PowerUp.h" />
     <ClInclude Include="src\managers\BulletManager.h" />
     <ClInclude Include="src\managers\EnemyWaveManager.h" />
