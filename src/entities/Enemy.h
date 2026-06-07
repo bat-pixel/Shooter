@@ -1,7 +1,6 @@
 #pragma once
 #include "BaseEntity.h"
 #include <SDL3/SDL.h>
-#include <functional>
 
 enum class EnemyType { SMALL, MEDIUM, LARGE, UFO };
 enum class EnemyPattern { STRAIGHT, SINE, DIVE };
@@ -14,23 +13,27 @@ public:
     void update(float dt) override;
     void render(SDL_Renderer* renderer) override;
 
-    EnemyType type() const { return m_type; }
+    EnemyType type()       const { return m_type; }
     int       scoreValue() const;
+    int       hp()         const { return m_hp; }
+    int       maxHp()      const { return m_maxHp; }
 
-    bool tryFire(float dt);   // returns true when enemy fires; caller spawns bullet
+    bool tryFire(float dt);
+    bool hit();  // decrements HP; returns true when the enemy dies
 
-    // Formation offset so WaveManager can set target position
     void setFormationTarget(float tx, float ty) { m_targetX = tx; m_targetY = ty; }
 
 private:
-    SDL_Texture*  m_tex;
-    SDL_Texture*  m_damageTex;
-    EnemyType     m_type;
-    EnemyPattern  m_pattern;
-    float         m_time        = 0;
-    float         m_fireTimer   = 0;
-    float         m_fireRate;
-    float         m_targetX     = 0;
-    float         m_targetY     = 0;
-    bool          m_inFormation = false;
+    SDL_Texture* m_tex;
+    SDL_Texture* m_damageTex;
+    EnemyType    m_type;
+    EnemyPattern m_pattern;
+    float        m_time        = 0;
+    float        m_fireTimer   = 0;
+    float        m_fireRate;
+    float        m_targetX     = 0;
+    float        m_targetY     = 0;
+    bool         m_inFormation = false;
+    int          m_hp          = 1;
+    int          m_maxHp       = 1;
 };

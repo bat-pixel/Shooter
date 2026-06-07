@@ -5,10 +5,11 @@
 #include <memory>
 #include <SDL3/SDL.h>
 
-struct WaveDef {
-    int         count;
-    EnemyType   type;
-    EnemyPattern pattern;
+struct Formation {
+    std::vector<int> enemyIndices;
+    bool             isRedSquadron = false;
+    bool             cleared       = false;
+    PowerUpType      powType       = PowerUpType::DOUBLE_SHOT;
 };
 
 class EnemyWaveManager {
@@ -31,14 +32,19 @@ public:
     std::vector<std::unique_ptr<Enemy>>&   enemies()  { return m_enemies;  }
     std::vector<std::unique_ptr<PowerUp>>& powerUps() { return m_powerUps; }
 
-    // Called by CollisionManager when an enemy is killed
-    void onEnemyKilled(Enemy* e, int waveIdx);
+    void onEnemyKilled(Enemy* e, int enemyIdx);
+
+    int killCount()    const { return m_killCount;    }
+    int totalSpawned() const { return m_totalSpawned; }
+    void resetKillStats()    { m_killCount = 0; m_totalSpawned = 0; }
 
 private:
-    void buildFormation(const WaveDef& def);
+    SDL_Texture* getPowTexture(PowerUpType type) const;
 
     std::vector<std::unique_ptr<Enemy>>   m_enemies;
     std::vector<std::unique_ptr<PowerUp>> m_powerUps;
+    std::vector<Formation>                m_formations;
+    std::vector<int>                      m_enemyFormation;
 
     SDL_Texture* m_enemyBlack[5] = {};
     SDL_Texture* m_enemyRed[5]   = {};
@@ -46,7 +52,8 @@ private:
     SDL_Texture* m_enemyGreen[5] = {};
     SDL_Texture* m_ufoTex        = nullptr;
 
-    int   m_waveNumber     = 0;
-    float m_spawnTimer     = 0;
-    int   m_aliveCount     = 0;
+    int m_waveNumber   = 0;
+    int m_aliveCount   = 0;
+    int m_killCount    = 0;
+    int m_totalSpawned = 0;
 };

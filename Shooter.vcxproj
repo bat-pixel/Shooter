@@ -101,7 +101,8 @@
     </Link>
     <PostBuildEvent>
       <Command>robocopy "$(ProjectDir)assets" "$(OutDir)assets" /E /NFL /NDL /NJH /NJS /NC /NS &gt;nul
-if %ERRORLEVEL% LEQ 1 exit 0</Command>
+xcopy /Y /Q "$(SolutionDir)..\vcpkg_installed\x64-windows\debug\bin\*.dll" "$(OutDir)" &gt;nul
+exit 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -123,7 +124,8 @@ if %ERRORLEVEL% LEQ 1 exit 0</Command>
     </Link>
     <PostBuildEvent>
       <Command>robocopy "$(ProjectDir)assets" "$(OutDir)assets" /E /NFL /NDL /NJH /NJS /NC /NS &gt;nul
-if %ERRORLEVEL% LEQ 1 exit 0</Command>
+xcopy /Y /Q "$(SolutionDir)..\vcpkg_installed\x64-windows\bin\*.dll" "$(OutDir)" &gt;nul
+exit 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -188,6 +190,7 @@ if %ERRORLEVEL% LEQ 1 exit 0</Command>
 
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\StageManager.cpp" />
     <ClCompile Include="src\Game.cpp" />
     <ClCompile Include="src\AssetManager.cpp" />
     <ClCompile Include="src\AudioManager.cpp" />
@@ -207,6 +210,7 @@ if %ERRORLEVEL% LEQ 1 exit 0</Command>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Constants.h" />
+    <ClInclude Include="src\StageManager.h" />
     <ClInclude Include="src\Game.h" />
     <ClInclude Include="src\AssetManager.h" />
     <ClInclude Include="src\AudioManager.h" />

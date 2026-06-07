@@ -11,6 +11,12 @@ void Background::update(float dt) {
     if (m_texH > 0 && m_offsetY >= m_texH) m_offsetY -= m_texH;
 }
 
+void Background::setTexture(SDL_Texture* tex) {
+    m_tex     = tex;
+    m_offsetY = 0;
+    if (tex) SDL_GetTextureSize(tex, &m_texW, &m_texH);
+}
+
 void Background::render(SDL_Renderer* renderer) {
     if (!m_tex) return;
 

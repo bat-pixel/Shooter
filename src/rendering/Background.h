@@ -8,7 +8,8 @@ public:
     void update(float dt);
     void render(SDL_Renderer* renderer);
 
-    void setSpeed(float s) { m_speed = s; }
+    void setSpeed(float s)         { m_speed = s; }
+    void setTexture(SDL_Texture* tex);
 
 private:
     SDL_Texture* m_tex;

@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 
+constexpr float SPRITE_SCALE = 0.25f;
+
 constexpr int   LOGICAL_W    = 480;
 constexpr int   LOGICAL_H    = 640;
 constexpr int   TARGET_FPS   = 60;
@@ -33,3 +35,22 @@ constexpr int SCORE_UFO            = 500;
 
 // ---- Bullet pool ----
 constexpr int BULLET_POOL_SIZE     = 128;
+
+// ---- Stage system ----
+constexpr int STAGE_COUNT        = 32;
+constexpr int PLAYER_START_LOOPS = 3;
+
+// ---- Scoring bonuses ----
+constexpr int SCORE_FORMATION_5   = 500;
+constexpr int SCORE_FORMATION_10  = 1000;
+constexpr int SCORE_LOOP_BONUS    = 1000;
+constexpr int SCORE_PERFECT_BONUS = 50000;
+constexpr int SCORE_POW_RED       = 1000;
+constexpr int SCORE_YASHICHI      = 5000;
+constexpr int SCORE_BOSS          = 10000;
+
+// ---- Enemy HP ----
+constexpr int ENEMY_HP_SMALL  = 1;
+constexpr int ENEMY_HP_MEDIUM = 3;
+constexpr int ENEMY_HP_LARGE  = 8;
+constexpr int BOSS_HP         = 60;

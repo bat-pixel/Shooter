@@ -12,10 +12,17 @@ Enemy::Enemy(float x, float y, EnemyType type, EnemyPattern pattern,
     m_velY    = ENEMY_SPEED_BASE + (std::rand() % 30);
     m_fireRate = ENEMY_FIRE_RATE + (std::rand() % 100) * 0.03f;
 
+    switch (type) {
+    case EnemyType::MEDIUM: m_hp = ENEMY_HP_MEDIUM; break;
+    case EnemyType::LARGE:  m_hp = ENEMY_HP_LARGE;  break;
+    default:                m_hp = ENEMY_HP_SMALL;  break;
+    }
+    m_maxHp = m_hp;
+
     if (tex) {
         float tw, th;
         SDL_GetTextureSize(tex, &tw, &th);
-        m_w = tw; m_h = th;
+        m_w = tw * SPRITE_SCALE; m_h = th * SPRITE_SCALE;
     }
 }
 
@@ -60,6 +67,14 @@ void Enemy::update(float dt) {
     m_fireTimer += dt;
 
     if (m_y > LOGICAL_H + m_h) m_active = false;
+}
+
+bool Enemy::hit() {
+    if (--m_hp <= 0) {
+        m_active = false;
+        return true;
+    }
+    return false;
 }
 
 bool Enemy::tryFire(float /*dt*/) {
