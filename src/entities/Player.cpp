@@ -72,7 +72,7 @@ bool Player::wantsToFire() {
 }
 
 void Player::hit() {
-    if (m_invincible) return;
+    if (m_invincible || m_godMode) return;
     if (m_shieldLevel > 0) {
         --m_shieldLevel;
         AudioManager::get().playSound("assets/Bonus/sfx_shieldDown.ogg");

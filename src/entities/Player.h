@@ -38,6 +38,8 @@ public:
     bool isBulletFrozen() const { return m_bulletFreezeTimer > 0; }
     int  wingmanCount()   const;
     void clearScreenWipe()      { m_screenWipe = false; }
+    void setGodMode(bool v)     { m_godMode = v; }
+    bool godMode()        const { return m_godMode; }
 
     const std::array<Wingman, 2>& wingmen() const { return m_wingmen; }
 
@@ -62,4 +64,5 @@ private:
 
     bool  m_screenWipe        = false;
     float m_bulletFreezeTimer = 0;
+    bool  m_godMode           = false;
 };

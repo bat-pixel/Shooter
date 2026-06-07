@@ -12,6 +12,7 @@ enum class Action {
     PAUSE,
     CONFIRM,
     BACK,
+    TRAINING,
 };
 
 class InputManager {

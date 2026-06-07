@@ -141,6 +141,10 @@ void Game::handleEvents() {
         input.update(e);
     }
 
+    if (input.isPressed(Action::TRAINING) && m_player) {
+        m_player->setGodMode(!m_player->godMode());
+    }
+
     if (input.isPressed(Action::PAUSE)) {
         if (m_state == GameState::PLAYING)
             m_state = GameState::PAUSED;
@@ -310,6 +314,9 @@ void Game::renderPlaying() {
                   m_player->shieldLevel(),
                   m_player->loopsRemaining(),
                   StageManager::get().highScore());
+
+    if (m_player->godMode())
+        renderText("TRAINING", 4, LOGICAL_H * 0.5f - 8, {255, 80, 80, 200}, 14);
 }
 
 void Game::renderMenu() {

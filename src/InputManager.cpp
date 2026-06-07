@@ -49,6 +49,7 @@ void InputManager::handleKey(SDL_Keycode key, bool down) {
     case SDLK_ESCAPE: case SDLK_P:a = Action::PAUSE;      break;
     case SDLK_RETURN:             a = Action::CONFIRM;     break;
     case SDLK_BACKSPACE:          a = Action::BACK;        break;
+    case SDLK_T:                  a = Action::TRAINING;    break;
     default: mapped = false; break;
     }
     if (!mapped) return;
