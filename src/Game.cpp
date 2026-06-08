@@ -516,6 +516,13 @@ void Game::advanceStage() {
 
 void Game::resetPlayer() {
     m_score = 0;
+    auto& am = AssetManager::get();
+    SDL_Texture* shipTex    = am.texture("assets/PNG/playerShip_p38.png");
+    SDL_Texture* wingmanTex = am.texture("assets/PNG/playerWingman.png");
+    std::array<SDL_Texture*, 3> damageTex = {nullptr, nullptr, nullptr};
+    m_player = std::make_unique<Player>(
+        LOGICAL_W * 0.5f - 24, LOGICAL_H - 120.f,
+        shipTex, damageTex, wingmanTex);
 }
 
 void Game::renderText(const std::string& text, float x, float y,
