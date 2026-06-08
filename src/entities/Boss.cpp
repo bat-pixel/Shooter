@@ -3,9 +3,10 @@
 #include <cmath>
 #include <algorithm>
 
-Boss::Boss(SDL_Texture* tex)
+Boss::Boss(SDL_Texture* tex, int bossIndex)
     : BaseEntity(0, -160.f, 128, 128)
     , m_tex(tex)
+    , m_bossIndex(std::clamp(bossIndex, 1, 8))
 {
     if (tex) {
         float tw, th;
@@ -13,9 +14,11 @@ Boss::Boss(SDL_Texture* tex)
         m_w = tw * PLANE_SCALE;
         m_h = th * PLANE_SCALE;
     }
-    m_x     = LOGICAL_W * 0.5f - m_w * 0.5f;
-    m_hp    = 30;
-    m_maxHp = 30;
+    m_x = LOGICAL_W * 0.5f - m_w * 0.5f;
+
+    int scaledHp = 50 + m_bossIndex * 30;  // 80 (boss1) → 290 (boss8)
+    m_hp    = scaledHp;
+    m_maxHp = scaledHp;
 }
 
 void Boss::update(float dt) {
@@ -28,30 +31,53 @@ void Boss::update(float dt) {
         return;
     }
 
-    // Slow sinusoidal patrol across top quarter of screen
+    // Sinusoidal patrol — faster as boss index increases
+    float freq  = 0.7f + m_bossIndex * 0.05f;
     float sweep = (LOGICAL_W - m_w) * 0.45f;
-    m_x = LOGICAL_W * 0.5f - m_w * 0.5f + std::sinf(m_time * 0.6f) * sweep;
+    m_x = LOGICAL_W * 0.5f - m_w * 0.5f + std::sinf(m_time * freq) * sweep;
     m_x = std::clamp(m_x, 0.f, (float)LOGICAL_W - m_w);
 
     m_fireTimer += dt;
 }
 
-bool Boss::tryFire(float& outX, float& outY, float& outVx, float& outVy) {
-    float fireRate = (m_hp < m_maxHp / 2) ? 0.6f : 1.0f;
+bool Boss::tryFire(float playerX, float playerY,
+                   float& outX, float& outY, float& outVx, float& outVy) {
+    // Fire rate tiers: normal → enraged → frantic
+    float fireRate;
+    if (m_hp <= m_maxHp / 4)       fireRate = 0.18f;
+    else if (m_hp <= m_maxHp / 2)  fireRate = 0.28f;
+    else                            fireRate = 0.45f;
+
     if (m_fireTimer < fireRate) return false;
     m_fireTimer = 0;
 
     float cx = m_x + m_w * 0.5f;
     float cy = m_y + m_h;
 
-    // Alternate between spread patterns
-    static const float patterns[3][2] = {{0,-1}, {-0.3f,-0.95f}, {0.3f,-0.95f}};
-    int p = m_shotPhase % 3;
-    outX  = cx;
-    outY  = cy;
-    outVx = patterns[p][0] * ENEMY_BULLET_SPEED;
-    outVy = -patterns[p][1] * ENEMY_BULLET_SPEED;
+    outX = cx;
+    outY = cy;
+
+    int phase = m_shotPhase % 4;
     ++m_shotPhase;
+
+    if (phase == 0 || phase == 3) {
+        // Aimed at player
+        float dx = playerX - cx;
+        float dy = playerY - cy;
+        float len = std::sqrtf(dx * dx + dy * dy);
+        if (len < 1.f) len = 1.f;
+        outVx = (dx / len) * ENEMY_BULLET_SPEED;
+        outVy = (dy / len) * ENEMY_BULLET_SPEED;
+    } else if (phase == 1) {
+        // 3-way fan: slight left bias — Game.cpp mirrors to right and adds center
+        outVx = -0.3f * ENEMY_BULLET_SPEED;
+        outVy =  0.95f * ENEMY_BULLET_SPEED;
+    } else {
+        // Wide spread: ±50° — Game.cpp mirrors and adds center
+        outVx = -0.6f * ENEMY_BULLET_SPEED;
+        outVy =  0.8f * ENEMY_BULLET_SPEED;
+    }
+
     return true;
 }
 
@@ -66,7 +92,7 @@ bool Boss::hit() {
 void Boss::render(SDL_Renderer* renderer) {
     if (!m_active || !m_tex) return;
     SDL_FRect dst = {m_x, m_y, m_w, m_h};
-    SDL_RenderTexture(renderer, m_tex, nullptr, &dst);
+    SDL_RenderTextureRotated(renderer, m_tex, nullptr, &dst, 0.0, nullptr, SDL_FLIP_VERTICAL);
 
     // Health bar just above boss
     float barW = m_w;

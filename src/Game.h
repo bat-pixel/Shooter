@@ -10,6 +10,7 @@
 #include "managers/BulletManager.h"
 #include "managers/EnemyWaveManager.h"
 #include "managers/CollisionManager.h"
+#include "managers/LevelObjectManager.h"
 #include "rendering/Background.h"
 #include "rendering/SpriteAnimation.h"
 #include "rendering/HUD.h"
@@ -74,8 +75,14 @@ private:
     std::vector<Explosion>   m_explosions;
     std::vector<SDL_Texture*> m_explosionFrames;
 
-    SDL_Texture* m_menuBg = nullptr;
-    SDL_Texture* m_playerBulletTex = nullptr;
-    SDL_Texture* m_enemyBulletTex  = nullptr;
-    SDL_Texture* m_bossTex         = nullptr;
+    LevelObjectManager m_levelObjects;
+    float              m_worldY = 0;
+
+    SDL_Texture* m_menuBg           = nullptr;
+    SDL_Texture* m_playerBulletTex  = nullptr;
+    SDL_Texture* m_enemyBulletTex   = nullptr;
+    SDL_Texture* m_bossTex          = nullptr;
+    SDL_Texture* m_terrainSmallTex  = nullptr;
+    SDL_Texture* m_terrainBigTex    = nullptr;
+    SDL_Texture* m_terrainCarrierTex = nullptr;
 };

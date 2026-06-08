@@ -7,6 +7,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
+#include <algorithm>
 #include <cstdlib>
 #include <ctime>
 #include <string>
@@ -88,6 +89,11 @@ bool Game::init() {
     // Boss
     m_bossTex = am.texture("assets/PNG/Enemies/bossAyako.png");
 
+    // Terrain objects (islands + carrier ships)
+    m_terrainSmallTex   = am.texture("assets/PNG/Terrain/small_island.png");
+    m_terrainBigTex     = am.texture("assets/PNG/Terrain/big_island.png");
+    m_terrainCarrierTex = am.texture("assets/PNG/Terrain/carrier_ship.png");
+
     // HUD — use P-38 sprite as life icon
     TTF_Font* font    = am.font("assets/Bonus/kenvector_future.ttf", 16);
     SDL_Texture* lifeIcon = wingmanTex ? wingmanTex : shipTex;
@@ -162,8 +168,11 @@ void Game::handleEvents() {
 
     if (m_state == GameState::MENU && input.isPressed(Action::CONFIRM)) {
         StageManager::get().reset();
-        m_level = 1;
+        m_level  = 1;
+        m_worldY = 0;
         m_waves.resetKillStats();
+        m_levelObjects.startStage(StageManager::get().currentDef().bgIndex,
+            m_terrainSmallTex, m_terrainBigTex, m_terrainCarrierTex);
         m_state = GameState::PLAYING;
         m_waves.startWave(m_level);
         AudioManager::get().playMusic("assets/sounds/bgm_stage.mp3");
@@ -180,8 +189,10 @@ void Game::handleEvents() {
         m_state  = GameState::MENU;
         m_waves.clear();
         m_bullets.clear();
+        m_levelObjects.clear();
         m_boss.reset();
         m_bossSpawned = false;
+        m_worldY      = 0;
         m_explosions.clear();
         resetPlayer();
     }
@@ -198,6 +209,8 @@ void Game::update(float dt) {
 
 void Game::updatePlaying(float dt) {
     m_background->update(dt);
+    m_worldY += 80.f * dt;
+    m_levelObjects.update(m_worldY, dt);
     m_player->update(dt);
 
     if (!m_player->isActive()) {
@@ -259,8 +272,10 @@ void Game::updatePlaying(float dt) {
     if (m_boss && m_boss->isActive()) {
         m_boss->update(dt);
         if (!m_player->isBulletFrozen()) {
+            float pcx = m_player->bounds().x + m_player->bounds().w * 0.5f;
+            float pcy = m_player->bounds().y + m_player->bounds().h * 0.5f;
             float bx, by, bvx, bvy;
-            if (m_boss->tryFire(bx, by, bvx, bvy)) {
+            if (m_boss->tryFire(pcx, pcy, bx, by, bvx, bvy)) {
                 m_bullets.spawnEnemy(bx, by, bvx, bvy, m_enemyBulletTex);
                 // Boss fires three-shot burst
                 m_bullets.spawnEnemy(bx, by, -bvx, bvy, m_enemyBulletTex);
@@ -288,6 +303,25 @@ void Game::updatePlaying(float dt) {
     }
 
     m_bullets.update(dt);
+
+    // Player bullets vs destructible terrain (carrier ships)
+    for (auto& t : m_levelObjects.objects()) {
+        if (!t->isDestructible() || !t->isActive()) continue;
+        for (auto& b : m_bullets.bullets()) {
+            if (!b.isActive() || b.owner() != BulletOwner::PLAYER) continue;
+            if (t->collidesWithRect(b.bounds())) {
+                b.setActive(false);
+                if (t->hit()) {
+                    spawnExplosion(t->bounds().x + t->bounds().w * 0.3f,
+                                   t->bounds().y + t->bounds().h * 0.3f);
+                    spawnExplosion(t->bounds().x + t->bounds().w * 0.7f,
+                                   t->bounds().y + t->bounds().h * 0.6f);
+                    AudioManager::get().playSound("assets/sounds/explosion_large.mp3");
+                    m_score += 5000;
+                }
+            }
+        }
+    }
 
     for (auto& ex : m_explosions) ex.anim.update(dt);
     m_explosions.erase(
@@ -340,6 +374,7 @@ void Game::render() {
 
 void Game::renderPlaying() {
     m_background->render(m_renderer);
+    m_levelObjects.render(m_renderer);
     m_waves.render(m_renderer);
     if (m_boss) m_boss->render(m_renderer);
     m_bullets.render(m_renderer);
@@ -447,7 +482,9 @@ void Game::spawnExplosion(float x, float y) {
 
 void Game::spawnBoss() {
     m_bossSpawned = true;
-    m_boss = std::make_unique<Boss>(m_bossTex);
+    int stageNum  = StageManager::get().currentDef().stageNumber;
+    int bossIndex = std::clamp((29 - stageNum) / 4 + 1, 1, 8);
+    m_boss = std::make_unique<Boss>(m_bossTex, bossIndex);
     AudioManager::get().playSound("assets/sounds/boss_warning.mp3");
     AudioManager::get().playMusic("assets/sounds/bgm_boss.mp3");
 }
@@ -456,15 +493,22 @@ void Game::advanceStage() {
     StageManager::get().advance();
     ++m_level;
 
-    // Background cycles continuously through all panels — no per-stage switch needed
+    m_worldY = 0;
+    int area = StageManager::get().currentDef().bgIndex;
+    m_levelObjects.startStage(area,
+        m_terrainSmallTex, m_terrainBigTex, m_terrainCarrierTex);
 
     m_player->resetForNewStage();
     m_waves.resetKillStats();
     m_waves.startWave(m_level);
 
-    const char* music = StageManager::get().currentDef().hasBoss
-        ? "assets/sounds/bgm_boss.mp3"
-        : "assets/sounds/bgm_stage.mp3";
+    const char* music;
+    if (StageManager::get().currentDef().hasBoss)
+        music = "assets/sounds/bgm_boss.mp3";
+    else if (area >= 2)
+        music = "assets/sounds/bgm_stage2.mp3";
+    else
+        music = "assets/sounds/bgm_stage.mp3";
     AudioManager::get().playMusic(music);
 
     m_state = GameState::PLAYING;
@@ -499,6 +543,7 @@ void Game::shutdown() {
     m_hud.reset();
     m_waves.clear();
     m_bullets.clear();
+    m_levelObjects.clear();
     m_explosions.clear();
     m_explosionFrames.clear();
 

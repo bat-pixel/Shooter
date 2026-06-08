@@ -201,9 +201,12 @@ exit 0</Command>
     <ClCompile Include="src\entities\Bullet.cpp" />
     <ClCompile Include="src\entities\Boss.cpp" />
     <ClCompile Include="src\entities\PowerUp.cpp" />
+    <ClCompile Include="src\entities\Terrain.cpp" />
+    <ClCompile Include="src\data\LevelData.cpp" />
     <ClCompile Include="src\managers\BulletManager.cpp" />
     <ClCompile Include="src\managers\EnemyWaveManager.cpp" />
     <ClCompile Include="src\managers\CollisionManager.cpp" />
+    <ClCompile Include="src\managers\LevelObjectManager.cpp" />
     <ClCompile Include="src\rendering\Background.cpp" />
     <ClCompile Include="src\rendering\SpriteAnimation.cpp" />
     <ClCompile Include="src\rendering\HUD.cpp" />
@@ -221,9 +224,12 @@ exit 0</Command>
     <ClInclude Include="src\entities\Bullet.h" />
     <ClInclude Include="src\entities\Boss.h" />
     <ClInclude Include="src\entities\PowerUp.h" />
+    <ClInclude Include="src\entities\Terrain.h" />
+    <ClInclude Include="src\data\LevelData.h" />
     <ClInclude Include="src\managers\BulletManager.h" />
     <ClInclude Include="src\managers\EnemyWaveManager.h" />
     <ClInclude Include="src\managers\CollisionManager.h" />
+    <ClInclude Include="src\managers\LevelObjectManager.h" />
     <ClInclude Include="src\rendering\Background.h" />
     <ClInclude Include="src\rendering\SpriteAnimation.h" />
     <ClInclude Include="src\rendering\HUD.h" />
