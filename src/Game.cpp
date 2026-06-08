@@ -44,16 +44,11 @@ bool Game::init() {
 
     auto& am = AssetManager::get();
 
-    // Five scrolling background panels — cycle seamlessly as stages progress
-    std::vector<SDL_Texture*> bgPanels = {
-        am.texture("assets/PNG/Backgrounds/bg_ocean.png"),
-        am.texture("assets/PNG/Backgrounds/bg_foam.png"),
-        am.texture("assets/PNG/Backgrounds/bg_atoll.png"),
-        am.texture("assets/PNG/Backgrounds/bg_island.png"),
-        am.texture("assets/PNG/Backgrounds/bg_coast.png"),
-    };
-    m_menuBg = bgPanels[0];
-    m_background = std::make_unique<Background>(bgPanels, 80.f);
+    // Single ocean panel repeated endlessly — terrain objects overlay on top
+    SDL_Texture* oceanTex = am.texture("assets/PNG/Backgrounds/bg_ocean.png");
+    m_menuBg = oceanTex;
+    m_background = std::make_unique<Background>(
+        std::vector<SDL_Texture*>{oceanTex, oceanTex, oceanTex}, 80.f);
 
     // Explosion sprite (single frame, scaled to 64px at render)
     SDL_Texture* explosionTex = am.texture("assets/PNG/Effects/explosion.png");
