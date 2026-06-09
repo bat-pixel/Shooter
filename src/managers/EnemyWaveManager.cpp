@@ -9,6 +9,7 @@ void EnemyWaveManager::loadTextures(SDL_Texture* black[5],
                                     SDL_Texture* blue[5],
                                     SDL_Texture* green[5],
                                     SDL_Texture* zeroGreen[5],
+                                    SDL_Texture* nate[5],
                                     SDL_Texture* kamikaze,
                                     SDL_Texture* ufo) {
     for (int i = 0; i < 5; ++i) {
@@ -17,6 +18,7 @@ void EnemyWaveManager::loadTextures(SDL_Texture* black[5],
         m_enemyBlue[i]      = blue[i];
         m_enemyGreen[i]     = green[i];
         m_enemyZeroGreen[i] = zeroGreen[i];
+        m_enemyNate[i]      = nate[i];
     }
     m_enemyKamikaze = kamikaze;
     m_ufoTex = ufo;
@@ -133,9 +135,9 @@ void EnemyWaveManager::startWave(int stageNumber) {
         PowerUpType::EXTRA_LIFE,
     };
 
-    // Fighter color sets: black, red, blue, + olive green Zero from stage 24 onward
-    SDL_Texture** zeroSets[4] = { m_enemyBlack, m_enemyRed, m_enemyBlue, m_enemyZeroGreen };
-    int numColorSets = (stageNumber <= 24) ? 4 : 3;
+    // Fighter color sets: black/red/blue for early stages, + green Zero from 24, + Nate from 8
+    SDL_Texture** zeroSets[5] = { m_enemyBlack, m_enemyRed, m_enemyBlue, m_enemyZeroGreen, m_enemyNate };
+    int numColorSets = (stageNumber <= 8) ? 5 : (stageNumber <= 24) ? 4 : 3;
     int zeroFormIdx = 0;
 
     for (int f = 0; f < cfg.numFormations; ++f) {

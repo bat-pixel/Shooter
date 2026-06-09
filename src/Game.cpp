@@ -69,20 +69,22 @@ bool Game::init() {
     SDL_Texture* zeroRed      = am.texture("assets/PNG/Enemies/enemyZero_red.png");
     SDL_Texture* zeroBlue     = am.texture("assets/PNG/Enemies/enemyZero_blue.png");
     SDL_Texture* zeroGreenTex = am.texture("assets/PNG/Enemies/enemyZero_green.png");
+    SDL_Texture* nateTex      = am.texture("assets/PNG/Enemies/enemyNate.png");
     SDL_Texture* betty        = am.texture("assets/PNG/Enemies/enemyBetty.png");
     SDL_Texture* nell         = am.texture("assets/PNG/Enemies/enemyNell.png");
     m_enemyKamikazeTex        = am.texture("assets/PNG/Enemies/enemyKamikaze.png");
     m_bossKagaTex             = am.texture("assets/PNG/Enemies/bossKaga.png");
 
-    SDL_Texture* black[5], *red[5], *blue[5], *green[5], *zeroGreen[5];
+    SDL_Texture* black[5], *red[5], *blue[5], *green[5], *zeroGreen[5], *nate[5];
     for (int i = 0; i < 5; ++i) {
         black[i]     = zeroTex      ? zeroTex      : nullptr;
         red[i]       = zeroRed      ? zeroRed      : zeroTex;
         blue[i]      = zeroBlue     ? zeroBlue     : zeroTex;
         green[i]     = betty        ? betty        : nell;
         zeroGreen[i] = zeroGreenTex ? zeroGreenTex : zeroTex;
+        nate[i]      = nateTex      ? nateTex      : zeroTex;
     }
-    m_waves.loadTextures(black, red, blue, green, zeroGreen, m_enemyKamikazeTex, nell);
+    m_waves.loadTextures(black, red, blue, green, zeroGreen, nate, m_enemyKamikazeTex, nell);
 
     // Bullet sprites
     m_playerBulletTex = am.texture("assets/PNG/Lasers/playerBullet.png");
