@@ -208,9 +208,10 @@ bool Enemy::tryFire(float /*dt*/) {
 void Enemy::render(SDL_Renderer* renderer) {
     if (!m_active || !m_tex) return;
     SDL_FRect dst = {m_x, m_y, m_w, m_h};
-    if (m_renderAngle != 0.f) {
+    double totalAngle = (double)(m_renderAngle + m_baseAngle);
+    if (totalAngle != 0.0) {
         SDL_RenderTextureRotated(renderer, m_tex, nullptr, &dst,
-                                 (double)m_renderAngle, nullptr, SDL_FLIP_NONE);
+                                 totalAngle, nullptr, SDL_FLIP_NONE);
     } else {
         SDL_RenderTexture(renderer, m_tex, nullptr, &dst);
     }

@@ -24,6 +24,7 @@ public:
 
     void setFormationTarget(float tx, float ty) { m_targetX = tx; m_targetY = ty; }
     void setPlayerTarget(float px, float py)   { m_playerX = px; m_playerY = py; }
+    void setBaseAngle(float a)                 { m_baseAngle = a; }
 
 private:
     SDL_Texture* m_tex;
@@ -51,7 +52,8 @@ private:
     float        m_diveVelY     = 0.f;   // LOOP_DIVE: aimed dive velocity Y
     float        m_playerX      = 180.f; // player center X (updated each frame)
     float        m_playerY      = 320.f; // player center Y
-    float        m_renderAngle  = 0.f;   // sprite rotation in degrees
+    float        m_renderAngle  = 0.f;   // physics-derived rotation in degrees
+    float        m_baseAngle   = 0.f;   // sprite orientation offset (180° for south-facing assets)
     int          m_hp            = 1;
     int          m_maxHp         = 1;
 };

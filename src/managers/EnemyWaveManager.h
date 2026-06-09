@@ -20,7 +20,8 @@ struct PendingFormation {
     SDL_Texture* texSet[5];
     bool         isRedSquadron;
     PowerUpType  powType;
-    float        speedMult = 1.f;
+    float        speedMult  = 1.f;
+    float        baseAngle  = 0.f;  // 180° for south-facing sprites
 };
 
 class EnemyWaveManager {

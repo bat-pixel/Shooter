@@ -142,7 +142,8 @@ void EnemyWaveManager::startWave(int stageNumber) {
     };
 
     // Fighter color sets: black/red/blue (all), +ZeroGreen (stage≤24), +Nate (stage≤8), +Oscar (stage≤4)
-    SDL_Texture** zeroSets[6] = { m_enemyBlack, m_enemyRed, m_enemyBlue, m_enemyZeroGreen, m_enemyNate, m_enemyOscar };
+    SDL_Texture** zeroSets[6]   = { m_enemyBlack, m_enemyRed, m_enemyBlue, m_enemyZeroGreen, m_enemyNate, m_enemyOscar };
+    float         zeroAngles[6] = { 0.f,          0.f,        0.f,         0.f,              0.f,         180.f        };
     int numColorSets = (stageNumber <= 4) ? 6 : (stageNumber <= 8) ? 5 : (stageNumber <= 24) ? 4 : 3;
     int zeroFormIdx = 0;
 
@@ -160,6 +161,7 @@ void EnemyWaveManager::startWave(int stageNumber) {
             pf.pattern       = EnemyPattern::STRAIGHT;
             pf.isRedSquadron = false;
             pf.powType       = PowerUpType::EXTRA_LIFE;
+            pf.baseAngle     = (bomberSet == m_enemyHelen) ? 180.f : 0.f;
             for (int i = 0; i < 5; ++i) pf.texSet[i] = bomberSet[i];
         } else {
             pf.cols          = cfg.cols;
@@ -167,7 +169,9 @@ void EnemyWaveManager::startWave(int stageNumber) {
             pf.pattern       = cfg.patterns[zeroFormIdx % cfg.patternCount];
             pf.isRedSquadron = (zeroFormIdx % 2 == 0);
             pf.powType       = powCycle[zeroFormIdx % 5];
-            SDL_Texture** set = zeroSets[zeroFormIdx % numColorSets];
+            int setIdx       = zeroFormIdx % numColorSets;
+            pf.baseAngle     = zeroAngles[setIdx];
+            SDL_Texture** set = zeroSets[setIdx];
             for (int i = 0; i < 5; ++i) pf.texSet[i] = set[i];
             ++zeroFormIdx;
         }
@@ -204,6 +208,7 @@ void EnemyWaveManager::startWave(int stageNumber) {
         vf.isRedSquadron = true;
         vf.powType       = PowerUpType::SCORE_RED;
         vf.speedMult     = cfg.speedMult;
+        vf.baseAngle     = 180.f;  // south-facing sprite
         for (int i = 0; i < 5; ++i) vf.texSet[i] = m_enemyVal;
         m_pendingQueue.push_back(vf);
     }
@@ -233,10 +238,13 @@ void EnemyWaveManager::spawnFormation(const PendingFormation& pf) {
     f.isRedSquadron = pf.isRedSquadron;
     f.powType       = pf.powType;
 
+    auto applyBase = [&](Enemy* e) { if (pf.baseAngle != 0.f) e->setBaseAngle(pf.baseAngle); };
+
     if (pf.type == EnemyType::UFO) {
         float ux = 30.f + (std::rand() % (LOGICAL_W - 60));
         auto u = std::make_unique<Enemy>(ux, -60.f, EnemyType::UFO, EnemyPattern::SINE,
                                          pf.texSet[0], nullptr, pf.speedMult);
+        applyBase(u.get());
         int idx = (int)m_enemies.size();
         f.enemyIndices.push_back(idx);
         m_enemies.push_back(std::move(u));
@@ -252,6 +260,7 @@ void EnemyWaveManager::spawnFormation(const PendingFormation& pf) {
             float ty = -50.f - c * 35.f;
             auto e = std::make_unique<Enemy>(tx, ty, pf.type, pf.pattern, pf.texSet[c % 5],
                                              nullptr, pf.speedMult);
+            applyBase(e.get());
             int idx = (int)m_enemies.size();
             f.enemyIndices.push_back(idx);
             m_enemies.push_back(std::move(e));
@@ -266,6 +275,7 @@ void EnemyWaveManager::spawnFormation(const PendingFormation& pf) {
             float ty = -50.f - c * 20.f;
             auto e = std::make_unique<Enemy>(tx, ty, pf.type, pf.pattern, pf.texSet[c % 5],
                                              nullptr, pf.speedMult);
+            applyBase(e.get());
             int idx = (int)m_enemies.size();
             f.enemyIndices.push_back(idx);
             m_enemies.push_back(std::move(e));
@@ -281,6 +291,7 @@ void EnemyWaveManager::spawnFormation(const PendingFormation& pf) {
             auto e = std::make_unique<Enemy>(
                 tx, ty - 200.f, pf.type, pf.pattern, pf.texSet[c % 5],
                 nullptr, pf.speedMult);
+            applyBase(e.get());
             e->setFormationTarget(tx, ty);
             int idx = (int)m_enemies.size();
             f.enemyIndices.push_back(idx);
