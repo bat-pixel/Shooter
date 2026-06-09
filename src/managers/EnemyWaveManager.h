@@ -33,6 +33,9 @@ public:
                       SDL_Texture* enemyGreen[5],
                       SDL_Texture* enemyZeroGreen[5],
                       SDL_Texture* enemyNate[5],
+                      SDL_Texture* enemyOscar[5],
+                      SDL_Texture* enemyVal,
+                      SDL_Texture* enemyHelen[5],
                       SDL_Texture* enemyKamikaze,
                       SDL_Texture* ufoTex);
 
@@ -71,6 +74,9 @@ private:
     SDL_Texture* m_enemyGreen[5]     = {};
     SDL_Texture* m_enemyZeroGreen[5] = {};
     SDL_Texture* m_enemyNate[5]      = {};
+    SDL_Texture* m_enemyOscar[5]     = {};
+    SDL_Texture* m_enemyVal          = nullptr;
+    SDL_Texture* m_enemyHelen[5]     = {};
     SDL_Texture* m_enemyKamikaze     = nullptr;
     SDL_Texture* m_ufoTex            = nullptr;
 

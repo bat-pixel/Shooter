@@ -64,18 +64,24 @@ bool Game::init() {
         LOGICAL_W * 0.5f - 24, LOGICAL_H - 120.f,
         shipTex, damageTex, wingmanTex);
 
-    // Enemy textures — Zero variants + Betty bombers + new sprites
+    // Enemy textures — Zero variants + bombers + new sprites
     SDL_Texture* zeroTex      = am.texture("assets/PNG/Enemies/enemyZero.png");
     SDL_Texture* zeroRed      = am.texture("assets/PNG/Enemies/enemyZero_red.png");
     SDL_Texture* zeroBlue     = am.texture("assets/PNG/Enemies/enemyZero_blue.png");
     SDL_Texture* zeroGreenTex = am.texture("assets/PNG/Enemies/enemyZero_green.png");
     SDL_Texture* nateTex      = am.texture("assets/PNG/Enemies/enemyNate.png");
+    SDL_Texture* oscarTex     = am.texture("assets/PNG/Enemies/enemyOscar.png");
+    SDL_Texture* valTex       = am.texture("assets/PNG/Enemies/enemyVal.png");
     SDL_Texture* betty        = am.texture("assets/PNG/Enemies/enemyBetty.png");
     SDL_Texture* nell         = am.texture("assets/PNG/Enemies/enemyNell.png");
+    SDL_Texture* helenTex     = am.texture("assets/PNG/Enemies/enemyHelen.png");
+    SDL_Texture* ufoTex       = am.texture("assets/PNG/Enemies/enemyUFO.png");
     m_enemyKamikazeTex        = am.texture("assets/PNG/Enemies/enemyKamikaze.png");
     m_bossKagaTex             = am.texture("assets/PNG/Enemies/bossKaga.png");
+    m_bossCruiserTex          = am.texture("assets/PNG/Enemies/bossCruiser.png");
+    m_bossYamatoTex           = am.texture("assets/PNG/Enemies/bossYamato.png");
 
-    SDL_Texture* black[5], *red[5], *blue[5], *green[5], *zeroGreen[5], *nate[5];
+    SDL_Texture* black[5], *red[5], *blue[5], *green[5], *zeroGreen[5], *nate[5], *oscar[5], *helen[5];
     for (int i = 0; i < 5; ++i) {
         black[i]     = zeroTex      ? zeroTex      : nullptr;
         red[i]       = zeroRed      ? zeroRed      : zeroTex;
@@ -83,8 +89,11 @@ bool Game::init() {
         green[i]     = betty        ? betty        : nell;
         zeroGreen[i] = zeroGreenTex ? zeroGreenTex : zeroTex;
         nate[i]      = nateTex      ? nateTex      : zeroTex;
+        oscar[i]     = oscarTex     ? oscarTex     : zeroTex;
+        helen[i]     = helenTex     ? helenTex     : (betty ? betty : nell);
     }
-    m_waves.loadTextures(black, red, blue, green, zeroGreen, nate, m_enemyKamikazeTex, nell);
+    m_waves.loadTextures(black, red, blue, green, zeroGreen, nate, oscar, valTex, helen,
+                         m_enemyKamikazeTex, ufoTex ? ufoTex : nell);
 
     // Bullet sprites
     m_playerBulletTex = am.texture("assets/PNG/Lasers/playerBullet.png");
@@ -626,8 +635,12 @@ void Game::spawnBoss() {
     m_bossSpawned = true;
     int stageNum  = StageManager::get().currentDef().stageNumber;
     int bossIndex = std::clamp((29 - stageNum) / 4 + 1, 1, 8);
-    // Bosses 5-8 (later campaigns: Leyte through Okinawa) use the carrier Kaga sprite
-    SDL_Texture* bossTex = (bossIndex >= 5 && m_bossKagaTex) ? m_bossKagaTex : m_bossTex;
+    // Boss sprite progression: Ayako (1-2) → Cruiser (3-4) → Kaga carrier (5-6) → Yamato (7-8)
+    SDL_Texture* bossTex;
+    if      (bossIndex >= 7 && m_bossYamatoTex)  bossTex = m_bossYamatoTex;
+    else if (bossIndex >= 5 && m_bossKagaTex)     bossTex = m_bossKagaTex;
+    else if (bossIndex >= 3 && m_bossCruiserTex)  bossTex = m_bossCruiserTex;
+    else                                           bossTex = m_bossTex;
     m_boss = std::make_unique<Boss>(bossTex, bossIndex);
     AudioManager::get().playSound("assets/sounds/boss_warning.mp3");
     AudioManager::get().playMusic("assets/sounds/bgm_boss.mp3");

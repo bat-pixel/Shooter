@@ -10,6 +10,9 @@ void EnemyWaveManager::loadTextures(SDL_Texture* black[5],
                                     SDL_Texture* green[5],
                                     SDL_Texture* zeroGreen[5],
                                     SDL_Texture* nate[5],
+                                    SDL_Texture* oscar[5],
+                                    SDL_Texture* val,
+                                    SDL_Texture* helen[5],
                                     SDL_Texture* kamikaze,
                                     SDL_Texture* ufo) {
     for (int i = 0; i < 5; ++i) {
@@ -19,9 +22,12 @@ void EnemyWaveManager::loadTextures(SDL_Texture* black[5],
         m_enemyGreen[i]     = green[i];
         m_enemyZeroGreen[i] = zeroGreen[i];
         m_enemyNate[i]      = nate[i];
+        m_enemyOscar[i]     = oscar[i];
+        m_enemyHelen[i]     = helen[i];
     }
+    m_enemyVal      = val;
     m_enemyKamikaze = kamikaze;
-    m_ufoTex = ufo;
+    m_ufoTex        = ufo;
 }
 
 // Per-stage wave scripting. Index = 32 - stageNumber, so stage 32 is [0], stage 1 is [31].
@@ -135,10 +141,13 @@ void EnemyWaveManager::startWave(int stageNumber) {
         PowerUpType::EXTRA_LIFE,
     };
 
-    // Fighter color sets: black/red/blue for early stages, + green Zero from 24, + Nate from 8
-    SDL_Texture** zeroSets[5] = { m_enemyBlack, m_enemyRed, m_enemyBlue, m_enemyZeroGreen, m_enemyNate };
-    int numColorSets = (stageNumber <= 8) ? 5 : (stageNumber <= 24) ? 4 : 3;
+    // Fighter color sets: black/red/blue (all), +ZeroGreen (stage≤24), +Nate (stage≤8), +Oscar (stage≤4)
+    SDL_Texture** zeroSets[6] = { m_enemyBlack, m_enemyRed, m_enemyBlue, m_enemyZeroGreen, m_enemyNate, m_enemyOscar };
+    int numColorSets = (stageNumber <= 4) ? 6 : (stageNumber <= 8) ? 5 : (stageNumber <= 24) ? 4 : 3;
     int zeroFormIdx = 0;
+
+    // Late stages use Helen heavy bomber instead of Betty
+    SDL_Texture** bomberSet = (stageNumber <= 16 && m_enemyHelen[0]) ? m_enemyHelen : m_enemyGreen;
 
     for (int f = 0; f < cfg.numFormations; ++f) {
         PendingFormation pf;
@@ -151,7 +160,7 @@ void EnemyWaveManager::startWave(int stageNumber) {
             pf.pattern       = EnemyPattern::STRAIGHT;
             pf.isRedSquadron = false;
             pf.powType       = PowerUpType::EXTRA_LIFE;
-            for (int i = 0; i < 5; ++i) pf.texSet[i] = m_enemyGreen[i];
+            for (int i = 0; i < 5; ++i) pf.texSet[i] = bomberSet[i];
         } else {
             pf.cols          = cfg.cols;
             pf.type          = EnemyType::SMALL;
@@ -183,6 +192,20 @@ void EnemyWaveManager::startWave(int stageNumber) {
             for (int i = 0; i < 5; ++i) kf.texSet[i] = m_enemyKamikaze;
             m_pendingQueue.push_back(kf);
         }
+    }
+
+    // Val dive-bomber squad: mid-game exclusive (Rabaul through Saipan)
+    if (stageNumber <= 20 && stageNumber > 8 && m_enemyVal) {
+        PendingFormation vf;
+        vf.delay         = (cfg.numFormations * 0.4f) * cfg.interval;
+        vf.cols          = 3;
+        vf.type          = EnemyType::MEDIUM;
+        vf.pattern       = EnemyPattern::DIVE;
+        vf.isRedSquadron = true;
+        vf.powType       = PowerUpType::SCORE_RED;
+        vf.speedMult     = cfg.speedMult;
+        for (int i = 0; i < 5; ++i) vf.texSet[i] = m_enemyVal;
+        m_pendingQueue.push_back(vf);
     }
 
     // UFO mid-wave from Marshall campaign onward

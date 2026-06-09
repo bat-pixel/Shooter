@@ -86,6 +86,8 @@ private:
     SDL_Texture* m_enemyBulletTex   = nullptr;
     SDL_Texture* m_bossTex          = nullptr;
     SDL_Texture* m_bossKagaTex      = nullptr;
+    SDL_Texture* m_bossCruiserTex   = nullptr;
+    SDL_Texture* m_bossYamatoTex    = nullptr;
     SDL_Texture* m_enemyKamikazeTex = nullptr;
     std::vector<SDL_Texture*> m_terrainSmallTextures;
     SDL_Texture* m_terrainBigTex    = nullptr;
