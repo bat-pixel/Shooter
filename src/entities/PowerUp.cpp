@@ -2,12 +2,13 @@
 #include "../Constants.h"
 
 PowerUp::PowerUp(float x, float y, PowerUpType type, SDL_Texture* tex)
-    : BaseEntity(x, y, 34, 34), m_type(type), m_tex(tex) {
+    : BaseEntity(x, y, 48, 48), m_type(type), m_tex(tex) {
     m_velY = 80.0f;
     if (tex) {
         float tw, th;
         SDL_GetTextureSize(tex, &tw, &th);
-        m_w = tw * SPRITE_SCALE; m_h = th * SPRITE_SCALE;
+        m_w = tw * SPRITE_SCALE * 2.f;
+        m_h = th * SPRITE_SCALE * 2.f;
     }
 }
 
