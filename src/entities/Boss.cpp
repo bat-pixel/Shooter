@@ -3,10 +3,11 @@
 #include <cmath>
 #include <algorithm>
 
-Boss::Boss(SDL_Texture* tex, int bossIndex)
+Boss::Boss(SDL_Texture* tex, int bossIndex, bool flipV)
     : BaseEntity(0, -160.f, 128, 128)
     , m_tex(tex)
     , m_bossIndex(std::clamp(bossIndex, 1, 8))
+    , m_flipV(flipV)
 {
     if (tex) {
         float tw, th;
@@ -92,7 +93,8 @@ bool Boss::hit() {
 void Boss::render(SDL_Renderer* renderer) {
     if (!m_active || !m_tex) return;
     SDL_FRect dst = {m_x, m_y, m_w, m_h};
-    SDL_RenderTextureRotated(renderer, m_tex, nullptr, &dst, 0.0, nullptr, SDL_FLIP_VERTICAL);
+    SDL_RenderTextureRotated(renderer, m_tex, nullptr, &dst, 0.0, nullptr,
+                             m_flipV ? SDL_FLIP_VERTICAL : SDL_FLIP_NONE);
 
     // Health bar just above boss
     float barW = m_w;

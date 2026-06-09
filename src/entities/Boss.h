@@ -4,7 +4,7 @@
 
 class Boss : public BaseEntity {
 public:
-    explicit Boss(SDL_Texture* tex, int bossIndex = 1);
+    explicit Boss(SDL_Texture* tex, int bossIndex = 1, bool flipV = true);
 
     void update(float dt) override;
     void render(SDL_Renderer* renderer) override;
@@ -20,6 +20,7 @@ public:
 private:
     SDL_Texture* m_tex       = nullptr;
     int          m_bossIndex = 1;
+    bool         m_flipV     = true;
     int          m_hp        = 80;
     int          m_maxHp     = 80;
     float        m_time      = 0;

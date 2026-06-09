@@ -636,12 +636,14 @@ void Game::spawnBoss() {
     int stageNum  = StageManager::get().currentDef().stageNumber;
     int bossIndex = std::clamp((29 - stageNum) / 4 + 1, 1, 8);
     // Boss sprite progression: Ayako (1-2) → Cruiser (3-4) → Kaga carrier (5-6) → Yamato (7-8)
+    // Plane sprites are stored facing north and need a vertical flip; ship sprites do not.
     SDL_Texture* bossTex;
-    if      (bossIndex >= 7 && m_bossYamatoTex)  bossTex = m_bossYamatoTex;
-    else if (bossIndex >= 5 && m_bossKagaTex)     bossTex = m_bossKagaTex;
-    else if (bossIndex >= 3 && m_bossCruiserTex)  bossTex = m_bossCruiserTex;
-    else                                           bossTex = m_bossTex;
-    m_boss = std::make_unique<Boss>(bossTex, bossIndex);
+    bool flipV = true;
+    if      (bossIndex >= 7 && m_bossYamatoTex)  { bossTex = m_bossYamatoTex;  flipV = false; }
+    else if (bossIndex >= 5 && m_bossKagaTex)     { bossTex = m_bossKagaTex;    flipV = false; }
+    else if (bossIndex >= 3 && m_bossCruiserTex)  { bossTex = m_bossCruiserTex; flipV = false; }
+    else                                             bossTex = m_bossTex;
+    m_boss = std::make_unique<Boss>(bossTex, bossIndex, flipV);
     AudioManager::get().playSound("assets/sounds/boss_warning.mp3");
     AudioManager::get().playMusic("assets/sounds/bgm_boss.mp3");
 }
