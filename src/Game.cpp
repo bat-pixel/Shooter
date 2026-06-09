@@ -45,12 +45,23 @@ bool Game::init() {
 
     auto& am = AssetManager::get();
 
-    // Single ocean panel repeated endlessly — terrain objects overlay on top
+    // Campaign-specific background tiles (fall back to ocean if not yet available)
     SDL_Texture* oceanTex = am.texture("assets/PNG/Backgrounds/bg_ocean.png");
+    m_campaignBg[0] = am.texture("assets/PNG/Backgrounds/bg_midway.png");
+    m_campaignBg[1] = am.texture("assets/PNG/Backgrounds/bg_marshall.png");
+    m_campaignBg[2] = am.texture("assets/PNG/Backgrounds/bg_attu.png");
+    m_campaignBg[3] = am.texture("assets/PNG/Backgrounds/bg_rabaul.png");
+    m_campaignBg[4] = am.texture("assets/PNG/Backgrounds/bg_leyte.png");
+    m_campaignBg[5] = am.texture("assets/PNG/Backgrounds/bg_saipan.png");
+    m_campaignBg[6] = am.texture("assets/PNG/Backgrounds/bg_iwojima.png");
+    m_campaignBg[7] = am.texture("assets/PNG/Backgrounds/bg_tokyo.png");
+    // Use ocean as fallback for any missing campaign backgrounds
+    for (auto& t : m_campaignBg) if (!t) t = oceanTex;
+
     m_menuBg = am.texture("assets/intro_screen.png");
-    if (!m_menuBg) m_menuBg = oceanTex;  // fallback if missing
+    if (!m_menuBg) m_menuBg = oceanTex;
     m_background = std::make_unique<Background>(
-        std::vector<SDL_Texture*>{oceanTex, oceanTex, oceanTex}, 80.f);
+        std::vector<SDL_Texture*>{m_campaignBg[0]}, 80.f);
 
     // Explosion sprite (single frame, scaled to 64px at render)
     SDL_Texture* explosionTex = am.texture("assets/PNG/Effects/explosion.png");
@@ -219,8 +230,9 @@ void Game::handleEvents() {
             m_level  = 1;
             m_worldY = 0;
             m_waves.resetKillStats();
-            m_levelObjects.startStage(StageManager::get().currentDef().bgIndex,
-                m_terrainSmallTextures, m_terrainBigTex, m_terrainCarrierTex);
+            { int bg = StageManager::get().currentDef().bgIndex;
+              m_levelObjects.startStage(bg, m_terrainSmallTextures, m_terrainBigTex, m_terrainCarrierTex);
+              m_background->setTextures({m_campaignBg[bg]}); }
             m_state = GameState::PLAYING;
             m_waves.startWave(StageManager::get().currentStage());
             m_player->setGodMode(true);
@@ -233,8 +245,9 @@ void Game::handleEvents() {
         m_level  = 1;
         m_worldY = 0;
         m_waves.resetKillStats();
-        m_levelObjects.startStage(StageManager::get().currentDef().bgIndex,
-            m_terrainSmallTextures, m_terrainBigTex, m_terrainCarrierTex);
+        { int bg = StageManager::get().currentDef().bgIndex;
+          m_levelObjects.startStage(bg, m_terrainSmallTextures, m_terrainBigTex, m_terrainCarrierTex);
+          m_background->setTextures({m_campaignBg[bg]}); }
         m_state = GameState::PLAYING;
         m_waves.startWave(StageManager::get().currentStage());
         AudioManager::get().playMusic("assets/sounds/bgm_stage.mp3");
@@ -452,8 +465,20 @@ void Game::render() {
 }
 
 void Game::renderPlaying() {
-    // Solid ocean-blue background; terrain/islands render on top
-    SDL_SetRenderDrawColor(m_renderer, 30, 100, 160, 255);
+    // Per-campaign fill color shown beneath/between background tiles
+    static constexpr SDL_Color kCampaignColor[8] = {
+        { 25,  80, 140, 255},  // 0 Midway    — deep Pacific blue
+        { 15, 130, 150, 255},  // 1 Marshall  — turquoise atoll
+        { 35,  50,  70, 255},  // 2 Attu      — cold slate-gray
+        { 20,  55,  45, 255},  // 3 Rabaul    — dark volcanic green
+        { 15,  40,  45, 255},  // 4 Leyte     — oily battle water
+        { 50,  55,  60, 255},  // 5 Saipan    — industrial harbor
+        { 35,  38,  42, 255},  // 6 Iwo Jima  — volcanic ash gray
+        { 55,  58,  52, 255},  // 7 Tokyo     — urban gray-green
+    };
+    int bgIdx = std::clamp(StageManager::get().currentDef().bgIndex, 0, 7);
+    const SDL_Color& c = kCampaignColor[bgIdx];
+    SDL_SetRenderDrawColor(m_renderer, c.r, c.g, c.b, 255);
     SDL_RenderFillRect(m_renderer, nullptr);
     m_levelObjects.render(m_renderer);
     m_waves.render(m_renderer);
@@ -656,6 +681,7 @@ void Game::advanceStage() {
     int area = StageManager::get().currentDef().bgIndex;
     m_levelObjects.startStage(area,
         m_terrainSmallTextures, m_terrainBigTex, m_terrainCarrierTex);
+    m_background->setTextures({m_campaignBg[area]});
 
     m_player->resetForNewStage();
     m_waves.resetKillStats();

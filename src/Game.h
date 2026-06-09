@@ -81,7 +81,8 @@ private:
 
     float        m_menuTime          = 0.f;
     int          m_selectedStage     = 32;
-    SDL_Texture* m_menuBg           = nullptr;
+    SDL_Texture* m_menuBg              = nullptr;
+    SDL_Texture* m_campaignBg[8]      = {};       // one background per campaign (bgIndex 0-7)
     SDL_Texture* m_playerBulletTex  = nullptr;
     SDL_Texture* m_enemyBulletTex   = nullptr;
     SDL_Texture* m_bossTex          = nullptr;

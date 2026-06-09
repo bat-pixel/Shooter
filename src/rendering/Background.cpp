@@ -1,37 +1,57 @@
 #include "Background.h"
 #include "../Constants.h"
 #include <cmath>
+#include <algorithm>
+
+static constexpr float BG_SCALE = 2.f;  // display tilesets at 2x native pixel size
 
 Background::Background(std::vector<SDL_Texture*> textures, float scrollSpeed)
     : m_textures(std::move(textures)), m_speed(scrollSpeed)
 {
-    // Determine rendered segment height from the first valid texture.
-    // Each texture is scaled to fill LOGICAL_W wide; height scaled proportionally.
+    computeTileSize();
+}
+
+void Background::setTextures(std::vector<SDL_Texture*> textures) {
+    m_textures = std::move(textures);
+    computeTileSize();
+}
+
+void Background::computeTileSize() {
+    m_segH  = 0;
+    m_tileW = (float)LOGICAL_W;
     for (auto* t : m_textures) {
-        if (t) {
-            float tw, th;
-            SDL_GetTextureSize(t, &tw, &th);
-            if (tw > 0) { m_segH = th * ((float)LOGICAL_W / tw); break; }
+        if (!t) continue;
+        float tw, th;
+        SDL_GetTextureSize(t, &tw, &th);
+        if (tw <= 0) continue;
+        if (tw < (float)LOGICAL_W) {
+            // Small tileset image — tile at BG_SCALE
+            m_tileW = tw * BG_SCALE;
+            m_segH  = th * BG_SCALE;
+        } else {
+            // Large image — stretch to fill full width
+            m_tileW = (float)LOGICAL_W;
+            m_segH  = th * ((float)LOGICAL_W / tw);
         }
+        return;
     }
+    m_segH  = (float)LOGICAL_H;
+    m_tileW = (float)LOGICAL_W;
 }
 
 void Background::update(float dt) {
-    // Offset grows → segments shift upward → content appears to scroll downward
     m_offsetY -= m_speed * dt;
     float totalH = m_segH * (float)m_textures.size();
     if (totalH > 0) {
-        // Keep offset in [-totalH, 0] range
         m_offsetY = fmodf(m_offsetY, totalH);
         if (m_offsetY > 0) m_offsetY -= totalH;
     }
 }
 
 void Background::render(SDL_Renderer* renderer) {
-    if (m_textures.empty() || m_segH <= 0) return;
+    if (m_textures.empty() || m_segH <= 0 || m_tileW <= 0) return;
     int n = (int)m_textures.size();
 
-    // Find first segment that could be on-screen, then draw forward until off bottom
     int startK = (int)floorf(m_offsetY / m_segH) - 1;
     for (int k = startK; k <= startK + (int)ceilf((float)LOGICAL_H / m_segH) + 2; ++k) {
         float y = k * m_segH - m_offsetY;
@@ -41,7 +61,10 @@ void Background::render(SDL_Renderer* renderer) {
         int idx = ((k % n) + n) % n;
         if (!m_textures[idx]) continue;
 
-        SDL_FRect dst = {0.f, y, (float)LOGICAL_W, m_segH};
-        SDL_RenderTexture(renderer, m_textures[idx], nullptr, &dst);
+        // Tile horizontally at m_tileW — SDL clips to logical viewport automatically
+        for (float x = 0.f; x < (float)LOGICAL_W; x += m_tileW) {
+            SDL_FRect dst = {x, y, m_tileW, m_segH};
+            SDL_RenderTexture(renderer, m_textures[idx], nullptr, &dst);
+        }
     }
 }
