@@ -7,7 +7,7 @@ Bullet::Bullet() : BaseEntity(0, 0, 9, 37) {
 }
 
 void Bullet::fire(float x, float y, float velX, float velY,
-                  BulletOwner owner, SDL_Texture* tex) {
+                  BulletOwner owner, SDL_Texture* tex, float scale) {
     m_x     = x;
     m_y     = y;
     m_velX  = velX;
@@ -16,11 +16,11 @@ void Bullet::fire(float x, float y, float velX, float velY,
     m_tex   = tex;
     m_active = true;
 
-    // Size from texture
     if (tex) {
         float tw, th;
         SDL_GetTextureSize(tex, &tw, &th);
-        m_w = tw * PLANE_SCALE; m_h = th * PLANE_SCALE;
+        m_w = tw * PLANE_SCALE * scale;
+        m_h = th * PLANE_SCALE * scale;
     }
 }
 

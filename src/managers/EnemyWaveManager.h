@@ -33,7 +33,7 @@ public:
                       SDL_Texture* ufoTex);
 
     void startWave(int waveNumber);
-    void update(float dt);
+    void update(float dt, float playerX = 180.f, float playerY = 400.f);
     void render(SDL_Renderer* renderer);
     void clear();
 

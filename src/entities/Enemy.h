@@ -3,7 +3,7 @@
 #include <SDL3/SDL.h>
 
 enum class EnemyType { SMALL, MEDIUM, LARGE, UFO };
-enum class EnemyPattern { STRAIGHT, SINE, DIVE };
+enum class EnemyPattern { STRAIGHT, SINE, DIVE, ARC, LOOP_DIVE };
 
 class Enemy : public BaseEntity {
 public:
@@ -22,18 +22,35 @@ public:
     bool hit();  // decrements HP; returns true when the enemy dies
 
     void setFormationTarget(float tx, float ty) { m_targetX = tx; m_targetY = ty; }
+    void setPlayerTarget(float px, float py)   { m_playerX = px; m_playerY = py; }
 
 private:
     SDL_Texture* m_tex;
     SDL_Texture* m_damageTex;
     EnemyType    m_type;
     EnemyPattern m_pattern;
-    float        m_time        = 0;
-    float        m_fireTimer   = 0;
+    float        m_time          = 0;
+    float        m_fireTimer     = 0;
     float        m_fireRate;
-    float        m_targetX     = 0;
-    float        m_targetY     = 0;
-    bool         m_inFormation = false;
-    int          m_hp          = 1;
-    int          m_maxHp       = 1;
+    float        m_initialX      = 0;   // SINE: anchor column
+    float        m_targetX       = 0;
+    float        m_targetY       = 0;
+    bool         m_inFormation   = false;
+    float        m_formationTimer = 0;  // DIVE: time spent in formation
+    float        m_loopAngle     = 0;   // DIVE: current angle on loop circle
+    float        m_loopCenterX   = 0;
+    float        m_loopCenterY   = 0;
+    bool         m_looping       = false; // DIVE: in circular loop phase
+    bool         m_diving        = false; // DIVE: post-loop straight dive
+    // ARC / LOOP_DIVE state
+    int          m_phase        = 0;     // generic phase counter
+    float        m_phaseTimer   = 0.f;   // timer within phase
+    float        m_arcForce     = 1.f;   // ARC: curve acceleration direction (+1/-1)
+    float        m_diveVelX     = 0.f;   // LOOP_DIVE: aimed dive velocity X
+    float        m_diveVelY     = 0.f;   // LOOP_DIVE: aimed dive velocity Y
+    float        m_playerX      = 180.f; // player center X (updated each frame)
+    float        m_playerY      = 320.f; // player center Y
+    float        m_renderAngle  = 0.f;   // sprite rotation in degrees
+    int          m_hp            = 1;
+    int          m_maxHp         = 1;
 };

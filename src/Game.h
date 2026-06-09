@@ -82,7 +82,7 @@ private:
     SDL_Texture* m_playerBulletTex  = nullptr;
     SDL_Texture* m_enemyBulletTex   = nullptr;
     SDL_Texture* m_bossTex          = nullptr;
-    SDL_Texture* m_terrainSmallTex  = nullptr;
+    std::vector<SDL_Texture*> m_terrainSmallTextures;
     SDL_Texture* m_terrainBigTex    = nullptr;
     SDL_Texture* m_terrainCarrierTex = nullptr;
 };

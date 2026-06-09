@@ -8,7 +8,7 @@
 class LevelObjectManager {
 public:
     void startStage(int area,
-                    SDL_Texture* texSmall,
+                    const std::vector<SDL_Texture*>& smallVariants,
                     SDL_Texture* texBig,
                     SDL_Texture* texCarrier);
     void update(float worldY, float dt);
@@ -19,12 +19,13 @@ public:
 
 private:
     std::vector<std::unique_ptr<Terrain>> m_objects;
-    const std::vector<LevelObject>*       m_script     = nullptr;
-    int                                   m_scriptIdx  = 0;
-    float                                 m_loopOffset = 0;
-    float                                 m_loopSpan   = 0;
+    const std::vector<LevelObject>*       m_script         = nullptr;
+    int                                   m_scriptIdx      = 0;
+    float                                 m_loopOffset     = 0;
+    float                                 m_loopSpan       = 0;
+    int                                   m_smallVariantIdx = 0;
 
-    SDL_Texture* m_texSmall   = nullptr;
-    SDL_Texture* m_texBig     = nullptr;
-    SDL_Texture* m_texCarrier = nullptr;
+    std::vector<SDL_Texture*> m_smallVariants;
+    SDL_Texture*              m_texBig     = nullptr;
+    SDL_Texture*              m_texCarrier = nullptr;
 };

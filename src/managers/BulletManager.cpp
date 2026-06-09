@@ -29,7 +29,7 @@ void BulletManager::spawnPlayer(float x, float y, int fireLevel,
 void BulletManager::spawnEnemy(float x, float y, float velX, float velY,
                                SDL_Texture* tex) {
     Bullet& b = getFree();
-    b.fire(x, y, velX, velY, BulletOwner::ENEMY, tex);
+    b.fire(x, y, velX, velY, BulletOwner::ENEMY, tex, 0.5f);
 }
 
 void BulletManager::update(float dt) {

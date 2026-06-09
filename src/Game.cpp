@@ -8,6 +8,7 @@
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <ctime>
 #include <string>
@@ -46,7 +47,8 @@ bool Game::init() {
 
     // Single ocean panel repeated endlessly — terrain objects overlay on top
     SDL_Texture* oceanTex = am.texture("assets/PNG/Backgrounds/bg_ocean.png");
-    m_menuBg = oceanTex;
+    m_menuBg = am.texture("assets/intro_screen.png");
+    if (!m_menuBg) m_menuBg = oceanTex;  // fallback if missing
     m_background = std::make_unique<Background>(
         std::vector<SDL_Texture*>{oceanTex, oceanTex, oceanTex}, 80.f);
 
@@ -85,9 +87,28 @@ bool Game::init() {
     m_bossTex = am.texture("assets/PNG/Enemies/bossAyako.png");
 
     // Terrain objects (islands + carrier ships)
-    m_terrainSmallTex   = am.texture("assets/PNG/Terrain/small_island.png");
     m_terrainBigTex     = am.texture("assets/PNG/Terrain/big_island.png");
     m_terrainCarrierTex = am.texture("assets/PNG/Terrain/carrier_ship.png");
+    for (const char* path : {
+        "assets/PNG/Terrain/small_island.png",
+        "assets/PNG/Terrain/island_palm_round.png",
+        "assets/PNG/Terrain/island_palm_irregular.png",
+        "assets/PNG/Terrain/island_palm_large.png",
+        "assets/PNG/Terrain/island_palm_oval.png",
+        "assets/PNG/Terrain/island_atoll_ring.png",
+        "assets/PNG/Terrain/island_atoll_small.png",
+        "assets/PNG/Terrain/island_atoll_sandy.png",
+        "assets/PNG/Terrain/island_atoll_wreath.png",
+        "assets/PNG/Terrain/island_volcano_mountain.png",
+        "assets/PNG/Terrain/island_volcano_erupting.png",
+        "assets/PNG/Terrain/island_volcano_crater.png",
+        "assets/PNG/Terrain/island_forest_round.png",
+        "assets/PNG/Terrain/island_forest_dark.png",
+        "assets/PNG/Terrain/island_forest_rocky.png",
+        "assets/PNG/Terrain/island_forest_dome.png",
+    }) {
+        if (SDL_Texture* t = am.texture(path)) m_terrainSmallTextures.push_back(t);
+    }
 
     // HUD — use P-38 sprite as life icon
     TTF_Font* font    = am.font("assets/Bonus/kenvector_future.ttf", 16);
@@ -102,7 +123,7 @@ bool Game::init() {
 
     // m_menuBg already set above
 
-    AudioManager::get().playMusic("assets/sounds/bgm_menu.mp3");
+    AudioManager::get().playMusic("assets/music/Skyfire Patrol intro.mp3");
 
     m_running = true;
     return true;
@@ -167,7 +188,7 @@ void Game::handleEvents() {
         m_worldY = 0;
         m_waves.resetKillStats();
         m_levelObjects.startStage(StageManager::get().currentDef().bgIndex,
-            m_terrainSmallTex, m_terrainBigTex, m_terrainCarrierTex);
+            m_terrainSmallTextures, m_terrainBigTex, m_terrainCarrierTex);
         m_state = GameState::PLAYING;
         m_waves.startWave(m_level);
         AudioManager::get().playMusic("assets/sounds/bgm_stage.mp3");
@@ -203,7 +224,6 @@ void Game::update(float dt) {
 }
 
 void Game::updatePlaying(float dt) {
-    m_background->update(dt);
     m_worldY += 80.f * dt;
     m_levelObjects.update(m_worldY, dt);
     m_player->update(dt);
@@ -242,7 +262,12 @@ void Game::updatePlaying(float dt) {
         AudioManager::get().playSound("assets/sounds/shoot_player.mp3");
     }
 
-    m_waves.update(dt);
+    {
+        const auto& pb = m_player->bounds();
+        float pcx = pb.x + pb.w * 0.5f;
+        float pcy = pb.y + pb.h * 0.5f;
+        m_waves.update(dt, pcx, pcy);
+    }
 
     // Enemy firing
     if (!m_player->isBulletFrozen()) {
@@ -271,10 +296,20 @@ void Game::updatePlaying(float dt) {
             float pcy = m_player->bounds().y + m_player->bounds().h * 0.5f;
             float bx, by, bvx, bvy;
             if (m_boss->tryFire(pcx, pcy, bx, by, bvx, bvy)) {
-                m_bullets.spawnEnemy(bx, by, bvx, bvy, m_enemyBulletTex);
-                // Boss fires three-shot burst
-                m_bullets.spawnEnemy(bx, by, -bvx, bvy, m_enemyBulletTex);
-                m_bullets.spawnEnemy(bx, by, 0, bvy * 0.9f, m_enemyBulletTex);
+                // 5-bullet carpet fan: ±45° and ±22.5° around aimed direction
+                float len = std::sqrtf(bvx*bvx + bvy*bvy);
+                if (len < 1.f) len = 1.f;
+                float nx = bvx / len, ny = bvy / len;
+                static constexpr float kAngles[5] = {
+                    -0.785f, -0.393f, 0.f, 0.393f, 0.785f  // -45°, -22.5°, 0°, +22.5°, +45°
+                };
+                for (float a : kAngles) {
+                    float c = std::cosf(a), s = std::sinf(a);
+                    m_bullets.spawnEnemy(bx, by,
+                        (nx*c - ny*s) * ENEMY_BULLET_SPEED,
+                        (nx*s + ny*c) * ENEMY_BULLET_SPEED,
+                        m_enemyBulletTex);
+                }
                 AudioManager::get().playSound("assets/sounds/shoot_enemy.mp3");
             }
         }
@@ -368,7 +403,9 @@ void Game::render() {
 }
 
 void Game::renderPlaying() {
-    m_background->render(m_renderer);
+    // Solid ocean-blue background; terrain/islands render on top
+    SDL_SetRenderDrawColor(m_renderer, 30, 100, 160, 255);
+    SDL_RenderFillRect(m_renderer, nullptr);
     m_levelObjects.render(m_renderer);
     m_waves.render(m_renderer);
     if (m_boss) m_boss->render(m_renderer);
@@ -392,16 +429,10 @@ void Game::renderMenu() {
         SDL_FRect dst = {0, 0, (float)LOGICAL_W, (float)LOGICAL_H};
         SDL_RenderTexture(m_renderer, m_menuBg, nullptr, &dst);
     }
-    SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 160);
-    SDL_FRect box = {20, 220, 320, 160};
-    SDL_RenderFillRect(m_renderer, &box);
-
-    renderText("1942", LOGICAL_W * 0.5f - 50, 235, {255, 255, 255, 255}, 36);
-    renderText("PRESS ENTER TO PLAY", LOGICAL_W * 0.5f - 110, 300, {255, 220, 0, 255}, 16);
 
     if (StageManager::get().highScore() > 0) {
-        std::string hs = "HI " + std::to_string(StageManager::get().highScore());
-        renderText(hs, LOGICAL_W * 0.5f - 40, 340, {200, 200, 200, 255}, 14);
+        std::string hs = "HI-SCORE  " + std::to_string(StageManager::get().highScore());
+        renderText(hs, LOGICAL_W * 0.5f - 70, LOGICAL_H - 24, {255, 220, 0, 255}, 12);
     }
 }
 
@@ -491,7 +522,7 @@ void Game::advanceStage() {
     m_worldY = 0;
     int area = StageManager::get().currentDef().bgIndex;
     m_levelObjects.startStage(area,
-        m_terrainSmallTex, m_terrainBigTex, m_terrainCarrierTex);
+        m_terrainSmallTextures, m_terrainBigTex, m_terrainCarrierTex);
 
     m_player->resetForNewStage();
     m_waves.resetKillStats();

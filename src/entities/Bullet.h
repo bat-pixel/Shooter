@@ -8,7 +8,7 @@ public:
     Bullet();   // pool: constructed inactive
 
     void fire(float x, float y, float velX, float velY,
-              BulletOwner owner, SDL_Texture* tex);
+              BulletOwner owner, SDL_Texture* tex, float scale = 1.0f);
 
     void update(float dt) override;
     void render(SDL_Renderer* renderer) override;

@@ -3,15 +3,16 @@
 #include <algorithm>
 
 void LevelObjectManager::startStage(int area,
-                                     SDL_Texture* texSmall,
+                                     const std::vector<SDL_Texture*>& smallVariants,
                                      SDL_Texture* texBig,
                                      SDL_Texture* texCarrier) {
     m_objects.clear();
-    m_scriptIdx  = 0;
-    m_loopOffset = 0;
-    m_texSmall   = texSmall;
-    m_texBig     = texBig;
-    m_texCarrier = texCarrier;
+    m_scriptIdx       = 0;
+    m_loopOffset      = 0;
+    m_smallVariantIdx = 0;
+    m_smallVariants   = smallVariants;
+    m_texBig          = texBig;
+    m_texCarrier      = texCarrier;
 
     m_script = &getLevelScript(area);
 
@@ -42,7 +43,11 @@ void LevelObjectManager::update(float worldY, float dt) {
         int hp = 0;
 
         switch (obj.type) {
-        case TerrainType::SMALL_ISLAND:  tex = m_texSmall;   hp = 0;  break;
+        case TerrainType::SMALL_ISLAND:
+            if (!m_smallVariants.empty())
+                tex = m_smallVariants[m_smallVariantIdx++ % (int)m_smallVariants.size()];
+            hp = 0;
+            break;
         case TerrainType::BIG_ISLAND:    tex = m_texBig;     hp = 0;  break;
         case TerrainType::CARRIER_SHIP:  tex = m_texCarrier; hp = 20; break;
         }

@@ -53,10 +53,12 @@ void EnemyWaveManager::startWave(int waveNumber) {
         pf.powType      = powCycle[f % 5];
         pf.type         = EnemyType::SMALL;
 
-        switch (f % 3) {
-        case 0: pf.pattern = EnemyPattern::STRAIGHT; break;
-        case 1: pf.pattern = EnemyPattern::SINE;     break;
-        case 2: pf.pattern = EnemyPattern::DIVE;     break;
+        switch (f % 5) {
+        case 0: pf.pattern = EnemyPattern::STRAIGHT;  break;
+        case 1: pf.pattern = EnemyPattern::SINE;      break;
+        case 2: pf.pattern = EnemyPattern::DIVE;      break;
+        case 3: pf.pattern = EnemyPattern::ARC;       break;
+        case 4: pf.pattern = EnemyPattern::LOOP_DIVE; break;
         }
 
         SDL_Texture** set = sets[f % 4];
@@ -99,6 +101,36 @@ void EnemyWaveManager::spawnFormation(const PendingFormation& pf) {
         m_enemyFormation.push_back(formIdx);
         ++m_aliveCount;
         ++m_totalSpawned;
+    } else if (pf.pattern == EnemyPattern::ARC) {
+        // Spawn a staggered column from left or right edge
+        bool fromLeft = (formIdx % 2 == 0);
+        float edgeX = fromLeft ? 5.f : LOGICAL_W - 35.f;
+        float xStep = fromLeft ? 18.f : -18.f;
+        for (int c = 0; c < pf.cols; ++c) {
+            float tx = edgeX + c * xStep;
+            float ty = -50.f - c * 35.f;  // stagger entry so they arrive sequentially
+            auto e = std::make_unique<Enemy>(tx, ty, pf.type, pf.pattern, pf.texSet[c % 5]);
+            int idx = (int)m_enemies.size();
+            f.enemyIndices.push_back(idx);
+            m_enemies.push_back(std::move(e));
+            m_enemyFormation.push_back(formIdx);
+            ++m_aliveCount;
+            ++m_totalSpawned;
+        }
+    } else if (pf.pattern == EnemyPattern::LOOP_DIVE) {
+        // Spawn in standard row; no formation approach, loop starts immediately on-screen
+        float spacingX = (LOGICAL_W - 60.f) / pf.cols;
+        for (int c = 0; c < pf.cols; ++c) {
+            float tx = 30.f + c * spacingX;
+            float ty = -50.f - c * 20.f;  // slight stagger for visual interest
+            auto e = std::make_unique<Enemy>(tx, ty, pf.type, pf.pattern, pf.texSet[c % 5]);
+            int idx = (int)m_enemies.size();
+            f.enemyIndices.push_back(idx);
+            m_enemies.push_back(std::move(e));
+            m_enemyFormation.push_back(formIdx);
+            ++m_aliveCount;
+            ++m_totalSpawned;
+        }
     } else {
         float spacingX = (LOGICAL_W - 60.f) / pf.cols;
         for (int c = 0; c < pf.cols; ++c) {
@@ -119,7 +151,7 @@ void EnemyWaveManager::spawnFormation(const PendingFormation& pf) {
     m_formations.push_back(std::move(f));
 }
 
-void EnemyWaveManager::update(float dt) {
+void EnemyWaveManager::update(float dt, float playerX, float playerY) {
     m_waveTimer += dt;
 
     // Drip-spawn formations as their delay elapses
@@ -129,7 +161,10 @@ void EnemyWaveManager::update(float dt) {
         ++m_pendingIdx;
     }
 
-    for (auto& e : m_enemies)  e->update(dt);
+    for (auto& e : m_enemies) {
+        e->setPlayerTarget(playerX, playerY);
+        e->update(dt);
+    }
     for (auto& p : m_powerUps) p->update(dt);
 
     m_powerUps.erase(

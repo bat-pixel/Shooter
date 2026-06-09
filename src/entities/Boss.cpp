@@ -31,9 +31,9 @@ void Boss::update(float dt) {
         return;
     }
 
-    // Sinusoidal patrol — faster as boss index increases
-    float freq  = 0.7f + m_bossIndex * 0.05f;
-    float sweep = (LOGICAL_W - m_w) * 0.45f;
+    // Aggressive sidestep: fast sinusoidal sweep across most of the screen
+    float freq  = 0.9f + m_bossIndex * 0.06f;
+    float sweep = (LOGICAL_W - m_w) * 0.48f;
     m_x = LOGICAL_W * 0.5f - m_w * 0.5f + std::sinf(m_time * freq) * sweep;
     m_x = std::clamp(m_x, 0.f, (float)LOGICAL_W - m_w);
 
