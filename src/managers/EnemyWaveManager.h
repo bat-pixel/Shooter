@@ -20,6 +20,7 @@ struct PendingFormation {
     SDL_Texture* texSet[5];
     bool         isRedSquadron;
     PowerUpType  powType;
+    float        speedMult = 1.f;
 };
 
 class EnemyWaveManager {
@@ -30,9 +31,11 @@ public:
                       SDL_Texture* enemyRed[5],
                       SDL_Texture* enemyBlue[5],
                       SDL_Texture* enemyGreen[5],
+                      SDL_Texture* enemyZeroGreen[5],
+                      SDL_Texture* enemyKamikaze,
                       SDL_Texture* ufoTex);
 
-    void startWave(int waveNumber);
+    void startWave(int stageNumber);
     void update(float dt, float playerX = 180.f, float playerY = 400.f);
     void render(SDL_Renderer* renderer);
     void clear();
@@ -61,13 +64,15 @@ private:
     int                                   m_pendingIdx  = 0;
     float                                 m_waveTimer   = 0;
 
-    SDL_Texture* m_enemyBlack[5] = {};
-    SDL_Texture* m_enemyRed[5]   = {};
-    SDL_Texture* m_enemyBlue[5]  = {};
-    SDL_Texture* m_enemyGreen[5] = {};
-    SDL_Texture* m_ufoTex        = nullptr;
+    SDL_Texture* m_enemyBlack[5]     = {};
+    SDL_Texture* m_enemyRed[5]       = {};
+    SDL_Texture* m_enemyBlue[5]      = {};
+    SDL_Texture* m_enemyGreen[5]     = {};
+    SDL_Texture* m_enemyZeroGreen[5] = {};
+    SDL_Texture* m_enemyKamikaze     = nullptr;
+    SDL_Texture* m_ufoTex            = nullptr;
 
-    int m_waveNumber   = 0;
+    int m_stageNumber  = 32;
     int m_aliveCount   = 0;
     int m_killCount    = 0;
     int m_totalSpawned = 0;

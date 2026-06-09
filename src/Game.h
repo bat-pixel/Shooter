@@ -15,7 +15,7 @@
 #include "rendering/SpriteAnimation.h"
 #include "rendering/HUD.h"
 
-enum class GameState { MENU, PLAYING, PAUSED, STAGE_TALLY, GAMEOVER };
+enum class GameState { MENU, LEVEL_SELECT, PLAYING, PAUSED, STAGE_TALLY, GAMEOVER };
 
 struct Explosion {
     SpriteAnimation anim;
@@ -36,6 +36,7 @@ private:
     void updatePlaying(float dt);
     void updateStageTally(float dt);
     void renderMenu();
+    void renderLevelSelect();
     void renderPlaying();
     void renderPaused();
     void renderStageTally();
@@ -78,10 +79,14 @@ private:
     LevelObjectManager m_levelObjects;
     float              m_worldY = 0;
 
+    float        m_menuTime          = 0.f;
+    int          m_selectedStage     = 32;
     SDL_Texture* m_menuBg           = nullptr;
     SDL_Texture* m_playerBulletTex  = nullptr;
     SDL_Texture* m_enemyBulletTex   = nullptr;
     SDL_Texture* m_bossTex          = nullptr;
+    SDL_Texture* m_bossKagaTex      = nullptr;
+    SDL_Texture* m_enemyKamikazeTex = nullptr;
     std::vector<SDL_Texture*> m_terrainSmallTextures;
     SDL_Texture* m_terrainBigTex    = nullptr;
     SDL_Texture* m_terrainCarrierTex = nullptr;

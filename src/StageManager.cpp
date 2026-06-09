@@ -47,6 +47,10 @@ void StageManager::reset() {
     m_current = 32;
 }
 
+void StageManager::resetToStage(int stage) {
+    m_current = std::clamp(stage, 1, 32);
+}
+
 void StageManager::advance() {
     if (m_current > 1) --m_current;
 }

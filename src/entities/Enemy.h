@@ -8,7 +8,8 @@ enum class EnemyPattern { STRAIGHT, SINE, DIVE, ARC, LOOP_DIVE };
 class Enemy : public BaseEntity {
 public:
     Enemy(float x, float y, EnemyType type, EnemyPattern pattern,
-          SDL_Texture* tex, SDL_Texture* damageTex = nullptr);
+          SDL_Texture* tex, SDL_Texture* damageTex = nullptr,
+          float speedMult = 1.f);
 
     void update(float dt) override;
     void render(SDL_Renderer* renderer) override;

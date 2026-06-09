@@ -8,18 +8,100 @@ void EnemyWaveManager::loadTextures(SDL_Texture* black[5],
                                     SDL_Texture* red[5],
                                     SDL_Texture* blue[5],
                                     SDL_Texture* green[5],
+                                    SDL_Texture* zeroGreen[5],
+                                    SDL_Texture* kamikaze,
                                     SDL_Texture* ufo) {
     for (int i = 0; i < 5; ++i) {
-        m_enemyBlack[i] = black[i];
-        m_enemyRed[i]   = red[i];
-        m_enemyBlue[i]  = blue[i];
-        m_enemyGreen[i] = green[i];
+        m_enemyBlack[i]     = black[i];
+        m_enemyRed[i]       = red[i];
+        m_enemyBlue[i]      = blue[i];
+        m_enemyGreen[i]     = green[i];
+        m_enemyZeroGreen[i] = zeroGreen[i];
     }
+    m_enemyKamikaze = kamikaze;
     m_ufoTex = ufo;
 }
 
-void EnemyWaveManager::startWave(int waveNumber) {
-    m_waveNumber = waveNumber;
+// Per-stage wave scripting. Index = 32 - stageNumber, so stage 32 is [0], stage 1 is [31].
+struct StageWaveConfig {
+    int          numFormations;
+    float        interval;      // seconds between formations
+    int          cols;          // Zero fighters per formation
+    float        speedMult;     // multiplied onto ENEMY_SPEED_BASE
+    int          bomberCount;   // LARGE Betty/Nell formations interspersed (3 cols each)
+    int          patternCount;
+    EnemyPattern patterns[5];
+};
+
+static const StageWaveConfig s_stageCfg[32] = {
+    // Stage 32 — Midway 1: gray Zeroes, STRAIGHT + SINE only
+    { 8, 4.5f, 5, 1.00f, 0, 2, {EnemyPattern::STRAIGHT, EnemyPattern::SINE}},
+    // Stage 31 — Midway 2: DIVE introduced
+    { 8, 4.0f, 5, 1.00f, 0, 3, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE}},
+    // Stage 30 — Midway 3: ARC + first Betty bombers
+    { 9, 3.8f, 6, 1.05f, 1, 4, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC}},
+    // Stage 29 — Midway Boss: all patterns
+    {10, 3.5f, 6, 1.10f, 1, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 28 — Marshall 1: UFO debut, dual-flank ARC
+    { 9, 3.5f, 5, 1.10f, 1, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 27 — Marshall 2: heavy LOOP_DIVE
+    {10, 3.2f, 5, 1.15f, 2, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 26 — Marshall 3: wider columns
+    {10, 3.0f, 6, 1.20f, 2, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 25 — Marshall Boss
+    {11, 2.8f, 6, 1.20f, 2, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 24 — Attu 1: Nell bombers debut
+    {10, 3.0f, 6, 1.25f, 2, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 23 — Attu 2: simultaneous flank + center
+    {11, 2.8f, 6, 1.30f, 3, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 22 — Attu 3: crossing flankers (both-side ARC)
+    {11, 2.6f, 7, 1.35f, 3, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 21 — Attu Boss
+    {12, 2.4f, 7, 1.40f, 3, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 20 — Rabaul 1: Double-Decker (bomber + Zero overlap)
+    {11, 2.6f, 7, 1.45f, 3, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 19 — Rabaul 2
+    {12, 2.4f, 7, 1.50f, 3, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 18 — Rabaul 3: 4-bomber waves
+    {12, 2.2f, 7, 1.55f, 4, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 17 — Rabaul Boss
+    {13, 2.0f, 7, 1.60f, 4, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 16 — Leyte 1
+    {12, 2.2f, 7, 1.60f, 4, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 15 — Leyte 2
+    {13, 2.0f, 7, 1.65f, 4, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 14 — Leyte 3
+    {13, 2.0f, 7, 1.70f, 4, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 13 — Leyte Boss
+    {14, 2.0f, 7, 1.75f, 5, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 12 — Saipan 1
+    {13, 2.0f, 7, 1.75f, 5, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 11 — Saipan 2
+    {14, 2.0f, 7, 1.80f, 5, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 10 — Saipan 3
+    {14, 2.0f, 7, 1.85f, 5, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 9 — Saipan Boss
+    {15, 2.0f, 7, 1.90f, 5, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 8 — Iwojima 1
+    {14, 2.0f, 7, 1.90f, 5, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 7 — Iwojima 2
+    {15, 2.0f, 7, 1.95f, 6, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 6 — Iwojima 3
+    {15, 2.0f, 7, 2.00f, 6, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 5 — Iwojima Boss
+    {16, 2.0f, 7, 2.00f, 6, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 4 — Okinawa 1
+    {15, 2.0f, 7, 2.00f, 6, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 3 — Okinawa 2
+    {16, 2.0f, 7, 2.10f, 7, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 2 — Okinawa 3
+    {16, 2.0f, 7, 2.20f, 7, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+    // Stage 1 — Okinawa Final Boss
+    {16, 2.0f, 7, 2.30f, 7, 5, {EnemyPattern::STRAIGHT, EnemyPattern::SINE, EnemyPattern::DIVE, EnemyPattern::ARC, EnemyPattern::LOOP_DIVE}},
+};
+
+void EnemyWaveManager::startWave(int stageNumber) {
+    m_stageNumber = stageNumber;
     m_enemies.clear();
     m_formations.clear();
     m_enemyFormation.clear();
@@ -30,10 +112,18 @@ void EnemyWaveManager::startWave(int waveNumber) {
     m_aliveCount   = 0;
     m_totalSpawned = 0;
 
-    // Number of formations scales with wave; earlier waves get enough to feel substantial
-    int numFormations = std::min(4 + waveNumber / 2, 14);
-    // Interval between formations shortens slightly as difficulty increases
-    float interval = std::max(3.5f - waveNumber * 0.06f, 2.0f);
+    int cfgIdx = std::clamp(32 - stageNumber, 0, 31);
+    const StageWaveConfig& cfg = s_stageCfg[cfgIdx];
+
+    // Spread bomber formations evenly through the wave
+    std::vector<bool> isBomber(cfg.numFormations, false);
+    if (cfg.bomberCount > 0) {
+        float step = (float)cfg.numFormations / (cfg.bomberCount + 1);
+        for (int b = 0; b < cfg.bomberCount; ++b) {
+            int slot = std::min((int)((b + 1) * step), cfg.numFormations - 1);
+            isBomber[slot] = true;
+        }
+    }
 
     static const PowerUpType powCycle[] = {
         PowerUpType::DOUBLE_SHOT,
@@ -43,42 +133,68 @@ void EnemyWaveManager::startWave(int waveNumber) {
         PowerUpType::EXTRA_LIFE,
     };
 
-    SDL_Texture** sets[4] = { m_enemyBlack, m_enemyRed, m_enemyBlue, m_enemyGreen };
+    // Fighter color sets: black, red, blue, + olive green Zero from stage 24 onward
+    SDL_Texture** zeroSets[4] = { m_enemyBlack, m_enemyRed, m_enemyBlue, m_enemyZeroGreen };
+    int numColorSets = (stageNumber <= 24) ? 4 : 3;
+    int zeroFormIdx = 0;
 
-    for (int f = 0; f < numFormations; ++f) {
+    for (int f = 0; f < cfg.numFormations; ++f) {
         PendingFormation pf;
-        pf.delay        = f * interval;
-        pf.cols         = 5;
-        pf.isRedSquadron= (f % 2 == 0);
-        pf.powType      = powCycle[f % 5];
-        pf.type         = EnemyType::SMALL;
+        pf.delay     = f * cfg.interval;
+        pf.speedMult = cfg.speedMult;
 
-        switch (f % 5) {
-        case 0: pf.pattern = EnemyPattern::STRAIGHT;  break;
-        case 1: pf.pattern = EnemyPattern::SINE;      break;
-        case 2: pf.pattern = EnemyPattern::DIVE;      break;
-        case 3: pf.pattern = EnemyPattern::ARC;       break;
-        case 4: pf.pattern = EnemyPattern::LOOP_DIVE; break;
+        if (isBomber[f]) {
+            pf.cols          = 3;
+            pf.type          = EnemyType::LARGE;
+            pf.pattern       = EnemyPattern::STRAIGHT;
+            pf.isRedSquadron = false;
+            pf.powType       = PowerUpType::EXTRA_LIFE;
+            for (int i = 0; i < 5; ++i) pf.texSet[i] = m_enemyGreen[i];
+        } else {
+            pf.cols          = cfg.cols;
+            pf.type          = EnemyType::SMALL;
+            pf.pattern       = cfg.patterns[zeroFormIdx % cfg.patternCount];
+            pf.isRedSquadron = (zeroFormIdx % 2 == 0);
+            pf.powType       = powCycle[zeroFormIdx % 5];
+            SDL_Texture** set = zeroSets[zeroFormIdx % numColorSets];
+            for (int i = 0; i < 5; ++i) pf.texSet[i] = set[i];
+            ++zeroFormIdx;
         }
-
-        SDL_Texture** set = sets[f % 4];
-        for (int i = 0; i < 5; ++i) pf.texSet[i] = set[i];
 
         m_pendingQueue.push_back(pf);
     }
 
-    // Add a UFO mid-wave on higher difficulties
-    if (waveNumber > 3 && m_ufoTex) {
+    // Kamikaze dive-bomber squads unlock at Saipan (stage 12) and scale up
+    if (stageNumber <= 12 && m_enemyKamikaze) {
+        int kamikazeCount = 1 + (12 - stageNumber) / 4;
+        kamikazeCount = std::min(kamikazeCount, 3);
+        float waveLen = (cfg.numFormations - 1) * cfg.interval;
+        for (int k = 0; k < kamikazeCount; ++k) {
+            PendingFormation kf;
+            kf.delay         = waveLen * (k + 1) / (kamikazeCount + 1);
+            kf.cols          = (stageNumber <= 5) ? 5 : 3;
+            kf.type          = EnemyType::MEDIUM;
+            kf.pattern       = EnemyPattern::LOOP_DIVE;
+            kf.isRedSquadron = false;
+            kf.powType       = PowerUpType::EXTRA_LOOP;
+            kf.speedMult     = cfg.speedMult;
+            for (int i = 0; i < 5; ++i) kf.texSet[i] = m_enemyKamikaze;
+            m_pendingQueue.push_back(kf);
+        }
+    }
+
+    // UFO mid-wave from Marshall campaign onward
+    if (stageNumber <= 28 && m_ufoTex) {
         PendingFormation uf;
-        uf.delay         = (numFormations / 2) * interval;
+        uf.delay         = (cfg.numFormations / 2) * cfg.interval;
         uf.cols          = 1;
         uf.isRedSquadron = false;
         uf.powType       = PowerUpType::SCORE_RED;
         uf.pattern       = EnemyPattern::SINE;
         uf.type          = EnemyType::UFO;
+        uf.speedMult     = cfg.speedMult;
         for (int i = 0; i < 5; ++i) uf.texSet[i] = m_ufoTex;
         m_pendingQueue.push_back(uf);
-        // Sort so UFO fires at the right time
         std::stable_sort(m_pendingQueue.begin(), m_pendingQueue.end(),
             [](const PendingFormation& a, const PendingFormation& b){
                 return a.delay < b.delay;
@@ -94,7 +210,8 @@ void EnemyWaveManager::spawnFormation(const PendingFormation& pf) {
 
     if (pf.type == EnemyType::UFO) {
         float ux = 30.f + (std::rand() % (LOGICAL_W - 60));
-        auto u = std::make_unique<Enemy>(ux, -60.f, EnemyType::UFO, EnemyPattern::SINE, pf.texSet[0]);
+        auto u = std::make_unique<Enemy>(ux, -60.f, EnemyType::UFO, EnemyPattern::SINE,
+                                         pf.texSet[0], nullptr, pf.speedMult);
         int idx = (int)m_enemies.size();
         f.enemyIndices.push_back(idx);
         m_enemies.push_back(std::move(u));
@@ -102,14 +219,14 @@ void EnemyWaveManager::spawnFormation(const PendingFormation& pf) {
         ++m_aliveCount;
         ++m_totalSpawned;
     } else if (pf.pattern == EnemyPattern::ARC) {
-        // Spawn a staggered column from left or right edge
         bool fromLeft = (formIdx % 2 == 0);
         float edgeX = fromLeft ? 5.f : LOGICAL_W - 35.f;
         float xStep = fromLeft ? 18.f : -18.f;
         for (int c = 0; c < pf.cols; ++c) {
             float tx = edgeX + c * xStep;
-            float ty = -50.f - c * 35.f;  // stagger entry so they arrive sequentially
-            auto e = std::make_unique<Enemy>(tx, ty, pf.type, pf.pattern, pf.texSet[c % 5]);
+            float ty = -50.f - c * 35.f;
+            auto e = std::make_unique<Enemy>(tx, ty, pf.type, pf.pattern, pf.texSet[c % 5],
+                                             nullptr, pf.speedMult);
             int idx = (int)m_enemies.size();
             f.enemyIndices.push_back(idx);
             m_enemies.push_back(std::move(e));
@@ -118,12 +235,12 @@ void EnemyWaveManager::spawnFormation(const PendingFormation& pf) {
             ++m_totalSpawned;
         }
     } else if (pf.pattern == EnemyPattern::LOOP_DIVE) {
-        // Spawn in standard row; no formation approach, loop starts immediately on-screen
         float spacingX = (LOGICAL_W - 60.f) / pf.cols;
         for (int c = 0; c < pf.cols; ++c) {
             float tx = 30.f + c * spacingX;
-            float ty = -50.f - c * 20.f;  // slight stagger for visual interest
-            auto e = std::make_unique<Enemy>(tx, ty, pf.type, pf.pattern, pf.texSet[c % 5]);
+            float ty = -50.f - c * 20.f;
+            auto e = std::make_unique<Enemy>(tx, ty, pf.type, pf.pattern, pf.texSet[c % 5],
+                                             nullptr, pf.speedMult);
             int idx = (int)m_enemies.size();
             f.enemyIndices.push_back(idx);
             m_enemies.push_back(std::move(e));
@@ -137,7 +254,8 @@ void EnemyWaveManager::spawnFormation(const PendingFormation& pf) {
             float tx = 30.f + c * spacingX;
             float ty = -50.f;
             auto e = std::make_unique<Enemy>(
-                tx, ty - 200.f, pf.type, pf.pattern, pf.texSet[c % 5]);
+                tx, ty - 200.f, pf.type, pf.pattern, pf.texSet[c % 5],
+                nullptr, pf.speedMult);
             e->setFormationTarget(tx, ty);
             int idx = (int)m_enemies.size();
             f.enemyIndices.push_back(idx);

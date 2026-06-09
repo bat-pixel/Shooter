@@ -7,13 +7,13 @@ static constexpr float PI = 3.14159265f;
 static constexpr float LOOP_RADIUS = 50.f;
 
 Enemy::Enemy(float x, float y, EnemyType type, EnemyPattern pattern,
-             SDL_Texture* tex, SDL_Texture* damageTex)
+             SDL_Texture* tex, SDL_Texture* damageTex, float speedMult)
     : BaseEntity(x, y, 50, 38)
     , m_tex(tex), m_damageTex(damageTex)
     , m_type(type), m_pattern(pattern)
     , m_initialX(x)
 {
-    m_velY    = ENEMY_SPEED_BASE + (std::rand() % 30);
+    m_velY    = (ENEMY_SPEED_BASE + (std::rand() % 30)) * speedMult;
     m_fireRate = ENEMY_FIRE_RATE + (std::rand() % 100) * 0.03f;
 
     switch (type) {

@@ -64,20 +64,25 @@ bool Game::init() {
         LOGICAL_W * 0.5f - 24, LOGICAL_H - 120.f,
         shipTex, damageTex, wingmanTex);
 
-    // Enemy textures — Zero variants + Betty bombers
-    SDL_Texture* zeroTex  = am.texture("assets/PNG/Enemies/enemyZero.png");
-    SDL_Texture* zeroRed  = am.texture("assets/PNG/Enemies/enemyZero_red.png");
-    SDL_Texture* zeroBlue = am.texture("assets/PNG/Enemies/enemyZero_blue.png");
-    SDL_Texture* betty    = am.texture("assets/PNG/Enemies/enemyBetty.png");
-    SDL_Texture* nell     = am.texture("assets/PNG/Enemies/enemyNell.png");
-    SDL_Texture* black[5], *red[5], *blue[5], *green[5];
+    // Enemy textures — Zero variants + Betty bombers + new sprites
+    SDL_Texture* zeroTex      = am.texture("assets/PNG/Enemies/enemyZero.png");
+    SDL_Texture* zeroRed      = am.texture("assets/PNG/Enemies/enemyZero_red.png");
+    SDL_Texture* zeroBlue     = am.texture("assets/PNG/Enemies/enemyZero_blue.png");
+    SDL_Texture* zeroGreenTex = am.texture("assets/PNG/Enemies/enemyZero_green.png");
+    SDL_Texture* betty        = am.texture("assets/PNG/Enemies/enemyBetty.png");
+    SDL_Texture* nell         = am.texture("assets/PNG/Enemies/enemyNell.png");
+    m_enemyKamikazeTex        = am.texture("assets/PNG/Enemies/enemyKamikaze.png");
+    m_bossKagaTex             = am.texture("assets/PNG/Enemies/bossKaga.png");
+
+    SDL_Texture* black[5], *red[5], *blue[5], *green[5], *zeroGreen[5];
     for (int i = 0; i < 5; ++i) {
-        black[i] = zeroTex  ? zeroTex  : nullptr;
-        red[i]   = zeroRed  ? zeroRed  : zeroTex;
-        blue[i]  = zeroBlue ? zeroBlue : zeroTex;
-        green[i] = betty    ? betty    : nell;
+        black[i]     = zeroTex      ? zeroTex      : nullptr;
+        red[i]       = zeroRed      ? zeroRed      : zeroTex;
+        blue[i]      = zeroBlue     ? zeroBlue     : zeroTex;
+        green[i]     = betty        ? betty        : nell;
+        zeroGreen[i] = zeroGreenTex ? zeroGreenTex : zeroTex;
     }
-    m_waves.loadTextures(black, red, blue, green, nell);
+    m_waves.loadTextures(black, red, blue, green, zeroGreen, m_enemyKamikazeTex, nell);
 
     // Bullet sprites
     m_playerBulletTex = am.texture("assets/PNG/Lasers/playerBullet.png");
@@ -155,8 +160,12 @@ void Game::handleEvents() {
         input.update(e);
     }
 
-    if (input.isPressed(Action::TRAINING) && m_player) {
-        m_player->setGodMode(!m_player->godMode());
+    // T key: in menu → open level select; in play → toggle god mode
+    if (input.isPressed(Action::TRAINING)) {
+        if (m_state == GameState::MENU)
+            m_state = GameState::LEVEL_SELECT;
+        else if (m_player)
+            m_player->setGodMode(!m_player->godMode());
     }
 
     if (m_player && m_player->godMode()) {
@@ -182,6 +191,32 @@ void Game::handleEvents() {
             m_state = GameState::PLAYING;
     }
 
+    // Level select navigation
+    if (m_state == GameState::LEVEL_SELECT) {
+        if (input.isPressed(Action::MOVE_LEFT))
+            m_selectedStage = (m_selectedStage < 32) ? m_selectedStage + 1 : 1;
+        if (input.isPressed(Action::MOVE_RIGHT))
+            m_selectedStage = (m_selectedStage > 1)  ? m_selectedStage - 1 : 32;
+        if (input.isPressed(Action::MOVE_UP))
+            m_selectedStage = std::min(m_selectedStage + 4, 32);
+        if (input.isPressed(Action::MOVE_DOWN))
+            m_selectedStage = std::max(m_selectedStage - 4, 1);
+        if (input.isPressed(Action::BACK))
+            m_state = GameState::MENU;
+        if (input.isPressed(Action::CONFIRM)) {
+            StageManager::get().resetToStage(m_selectedStage);
+            m_level  = 1;
+            m_worldY = 0;
+            m_waves.resetKillStats();
+            m_levelObjects.startStage(StageManager::get().currentDef().bgIndex,
+                m_terrainSmallTextures, m_terrainBigTex, m_terrainCarrierTex);
+            m_state = GameState::PLAYING;
+            m_waves.startWave(StageManager::get().currentStage());
+            m_player->setGodMode(true);
+            AudioManager::get().playMusic("assets/sounds/bgm_stage.mp3");
+        }
+    }
+
     if (m_state == GameState::MENU && input.isPressed(Action::CONFIRM)) {
         StageManager::get().reset();
         m_level  = 1;
@@ -190,7 +225,7 @@ void Game::handleEvents() {
         m_levelObjects.startStage(StageManager::get().currentDef().bgIndex,
             m_terrainSmallTextures, m_terrainBigTex, m_terrainCarrierTex);
         m_state = GameState::PLAYING;
-        m_waves.startWave(m_level);
+        m_waves.startWave(StageManager::get().currentStage());
         AudioManager::get().playMusic("assets/sounds/bgm_stage.mp3");
     }
 
@@ -217,6 +252,8 @@ void Game::handleEvents() {
 // -----------------------------------------------------------------------
 void Game::update(float dt) {
     switch (m_state) {
+    case GameState::MENU:
+    case GameState::LEVEL_SELECT: m_menuTime += dt;     break;
     case GameState::PLAYING:     updatePlaying(dt);     break;
     case GameState::STAGE_TALLY: updateStageTally(dt);  break;
     default: break;
@@ -393,6 +430,7 @@ void Game::render() {
 
     switch (m_state) {
     case GameState::MENU:        renderMenu();        break;
+    case GameState::LEVEL_SELECT:renderLevelSelect(); break;
     case GameState::PLAYING:     renderPlaying();     break;
     case GameState::PAUSED:      renderPaused();      break;
     case GameState::STAGE_TALLY: renderStageTally();  break;
@@ -430,10 +468,86 @@ void Game::renderMenu() {
         SDL_RenderTexture(m_renderer, m_menuBg, nullptr, &dst);
     }
 
+    // Dark panel at bottom for button readability
+    SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 170);
+    SDL_FRect panel = {0, LOGICAL_H - 115.f, (float)LOGICAL_W, 115.f};
+    SDL_RenderFillRect(m_renderer, &panel);
+
+    // "PLAY" button — pulsing gold outline box + label
+    float pulse = 0.5f + 0.5f * std::sinf(m_menuTime * 3.2f);
+    Uint8 pa = (Uint8)(160 + 95 * pulse);
+    SDL_Color playCol = {255, 220, 0, pa};
+    // key box
+    SDL_SetRenderDrawColor(m_renderer, 255, 220, 0, pa);
+    SDL_FRect playBox = {28.f, LOGICAL_H - 100.f, 64.f, 24.f};
+    SDL_RenderRect(m_renderer, &playBox);
+    renderText("ENTER", 34.f, LOGICAL_H - 97.f, playCol, 11);
+    renderText("PLAY", 104.f, LOGICAL_H - 97.f, playCol, 16);
+
+    // "TRAINING" button — static grey
+    SDL_SetRenderDrawColor(m_renderer, 180, 180, 180, 180);
+    SDL_FRect trainBox = {28.f, LOGICAL_H - 66.f, 28.f, 22.f};
+    SDL_RenderRect(m_renderer, &trainBox);
+    renderText("T", 36.f, LOGICAL_H - 63.f, {180, 180, 180, 200}, 12);
+    renderText("TRAINING / LEVEL SELECT", 68.f, LOGICAL_H - 63.f, {180, 180, 180, 200}, 11);
+
+    // Hi-score
     if (StageManager::get().highScore() > 0) {
         std::string hs = "HI-SCORE  " + std::to_string(StageManager::get().highScore());
-        renderText(hs, LOGICAL_W * 0.5f - 70, LOGICAL_H - 24, {255, 220, 0, 255}, 12);
+        renderText(hs, LOGICAL_W * 0.5f - 65.f, LOGICAL_H - 26.f, {255, 220, 0, 200}, 11);
     }
+}
+
+void Game::renderLevelSelect() {
+    // Background
+    if (m_menuBg) {
+        SDL_FRect dst = {0, 0, (float)LOGICAL_W, (float)LOGICAL_H};
+        SDL_RenderTexture(m_renderer, m_menuBg, nullptr, &dst);
+    }
+    SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 190);
+    SDL_FRect overlay = {0, LOGICAL_H * 0.38f, (float)LOGICAL_W, LOGICAL_H * 0.62f};
+    SDL_RenderFillRect(m_renderer, &overlay);
+
+    float cx = LOGICAL_W * 0.5f;
+
+    // Header
+    renderText("TRAINING MODE", cx - 78.f, LOGICAL_H * 0.40f, {255, 80, 80, 255}, 14);
+    renderText("STAGE SELECT", cx - 65.f, LOGICAL_H * 0.40f + 20.f, {200, 200, 200, 200}, 12);
+
+    // Stage number — large and gold
+    const StageDef& def = StageManager::get().getDef(m_selectedStage);
+    std::string stageStr = std::to_string(m_selectedStage);
+    renderText(stageStr, cx - stageStr.size() * 11.f, LOGICAL_H * 0.52f, {255, 215, 0, 255}, 36);
+
+    // Campaign + boss flag
+    std::string campaign = def.campaign;
+    renderText(campaign, cx - campaign.size() * 4.5f, LOGICAL_H * 0.62f, {200, 220, 255, 255}, 14);
+    if (def.hasBoss)
+        renderText("BOSS STAGE", cx - 45.f, LOGICAL_H * 0.62f + 20.f, {255, 80, 80, 220}, 12);
+
+    // Pulsing navigation arrows
+    float pulse = 0.5f + 0.5f * std::sinf(m_menuTime * 4.f);
+    Uint8 arrowAlpha = (Uint8)(140 + 115 * pulse);
+    SDL_Color arrowCol = {255, 215, 0, arrowAlpha};
+    renderText("<<", cx - 95.f, LOGICAL_H * 0.52f + 6.f, arrowCol, 18);
+    renderText(">>", cx + 62.f, LOGICAL_H * 0.52f + 6.f, arrowCol, 18);
+
+    // Navigation hints
+    renderText("LEFT / RIGHT  by stage",   cx - 88.f, LOGICAL_H * 0.74f, {160, 160, 160, 200}, 11);
+    renderText("UP / DOWN  by campaign",   cx - 85.f, LOGICAL_H * 0.74f + 18.f, {160, 160, 160, 200}, 11);
+
+    // Action buttons
+    SDL_SetRenderDrawColor(m_renderer, 255, 215, 0, 200);
+    SDL_FRect startBox = {cx - 85.f, LOGICAL_H * 0.83f, 80.f, 22.f};
+    SDL_RenderRect(m_renderer, &startBox);
+    renderText("ENTER", cx - 80.f, LOGICAL_H * 0.83f + 3.f, {255, 215, 0, 220}, 11);
+    renderText("START HERE", cx + 2.f, LOGICAL_H * 0.83f + 3.f, {255, 255, 255, 220}, 12);
+
+    SDL_SetRenderDrawColor(m_renderer, 160, 160, 160, 180);
+    SDL_FRect backBox = {cx - 85.f, LOGICAL_H * 0.83f + 30.f, 80.f, 22.f};
+    SDL_RenderRect(m_renderer, &backBox);
+    renderText("BKSP", cx - 79.f, LOGICAL_H * 0.83f + 33.f, {160, 160, 160, 200}, 11);
+    renderText("BACK TO MENU", cx + 2.f, LOGICAL_H * 0.83f + 33.f, {160, 160, 160, 200}, 11);
 }
 
 void Game::renderPaused() {
@@ -510,7 +624,9 @@ void Game::spawnBoss() {
     m_bossSpawned = true;
     int stageNum  = StageManager::get().currentDef().stageNumber;
     int bossIndex = std::clamp((29 - stageNum) / 4 + 1, 1, 8);
-    m_boss = std::make_unique<Boss>(m_bossTex, bossIndex);
+    // Bosses 5-8 (later campaigns: Leyte through Okinawa) use the carrier Kaga sprite
+    SDL_Texture* bossTex = (bossIndex >= 5 && m_bossKagaTex) ? m_bossKagaTex : m_bossTex;
+    m_boss = std::make_unique<Boss>(bossTex, bossIndex);
     AudioManager::get().playSound("assets/sounds/boss_warning.mp3");
     AudioManager::get().playMusic("assets/sounds/bgm_boss.mp3");
 }

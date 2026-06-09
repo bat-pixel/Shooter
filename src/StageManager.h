@@ -12,6 +12,7 @@ public:
     static StageManager& get();
 
     void reset();
+    void resetToStage(int stage);
     void advance();
 
     int             currentStage() const { return m_current; }
