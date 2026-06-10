@@ -96,6 +96,7 @@ private:
     LevelObjectManager m_levelObjects;
     float              m_worldY = 0;
 
+    float        m_mouseIdleTimer     = 0.f;
     float        m_menuTime          = 0.f;
     int          m_selectedStage     = 32;
     SDL_Texture* m_menuBg              = nullptr;

@@ -190,6 +190,10 @@ void Game::handleEvents() {
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         if (e.type == SDL_EVENT_QUIT) { m_running = false; return; }
+        if (e.type == SDL_EVENT_MOUSE_MOTION) {
+            m_mouseIdleTimer = 0.f;
+            SDL_ShowCursor();
+        }
         input.update(e);
     }
 
@@ -283,6 +287,9 @@ void Game::handleEvents() {
 
 // -----------------------------------------------------------------------
 void Game::update(float dt) {
+    m_mouseIdleTimer += dt;
+    if (m_mouseIdleTimer >= 2.0f) SDL_HideCursor();
+
     switch (m_state) {
     case GameState::MENU:
     case GameState::LEVEL_SELECT:
