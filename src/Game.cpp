@@ -521,7 +521,7 @@ void Game::updatePlaying(float dt) {
             // Boss stages get the carrier landing cutscene; non-boss stages skip straight to tally
             if (StageManager::get().currentDef().hasBoss) {
                 m_landingTimer  = 0.f;
-                m_landingPlaneY = -80.f;
+                m_landingPlaneY = (float)LOGICAL_H + 80.f;  // start below screen, fly upward
                 m_state = GameState::CARRIER_LANDING;
             } else {
                 m_state = GameState::STAGE_TALLY;
@@ -533,17 +533,20 @@ void Game::updatePlaying(float dt) {
 void Game::updateCarrierLanding(float dt) {
     m_landingTimer += dt;
 
-    // Plane descends from off-screen top to the carrier deck over 2 seconds
+    // Plane climbs from off-screen bottom to the carrier deck over 2 seconds
     static constexpr float DESCENT_DUR = 2.0f;
     static constexpr float HOLD_DUR    = 1.2f;  // pause on deck before tally
     static constexpr float TOTAL_DUR   = DESCENT_DUR + HOLD_DUR;
 
-    float landY = LOGICAL_H * 0.60f;  // Y where the plane touches down on the carrier
+    // Touchdown point: upper portion of the carrier deck
+    float deckY  = LOGICAL_H * 0.42f;
+    float deckH  = (float)LOGICAL_W * 0.55f;
+    float landY  = deckY + deckH * 0.30f;   // ~1/3 down the deck
+    float startY = (float)LOGICAL_H + 80.f;
     if (m_landingTimer < DESCENT_DUR) {
         float t = m_landingTimer / DESCENT_DUR;
-        // Ease-out: slow approach as it nears the deck
-        t = 1.f - (1.f - t) * (1.f - t);
-        m_landingPlaneY = -80.f + t * (landY - (-80.f));
+        t = 1.f - (1.f - t) * (1.f - t);   // ease-out: slows as it nears the deck
+        m_landingPlaneY = startY + t * (landY - startY);  // y decreases — flies upward
     } else {
         m_landingPlaneY = landY;
     }
@@ -775,15 +778,29 @@ void Game::renderCarrierLanding() {
         SDL_RenderTexture(m_renderer, planeTex, nullptr, &planeDst);
     }
 
-    // "MISSION COMPLETE" banner — fades in after 0.5s
-    if (m_landingTimer > 0.5f) {
-        Uint8 alpha = (Uint8)std::min(255.f, (m_landingTimer - 0.5f) * 300.f);
+    // "MISSION COMPLETE" banner — pops in after plane has climbed onto screen
+    if (m_landingTimer > 0.6f) {
+        float age   = m_landingTimer - 0.6f;
+        Uint8 alpha = (Uint8)std::min(255.f, age * 400.f);
+
+        // POW flash: large white pulse that fades quickly
+        if (age < 0.35f) {
+            Uint8 flashA = (Uint8)((1.f - age / 0.35f) * 200.f);
+            SDL_SetRenderDrawColor(m_renderer, 255, 240, 100, flashA);
+            SDL_FRect flash = {0, 0, (float)LOGICAL_W, (float)LOGICAL_H};
+            SDL_RenderFillRect(m_renderer, &flash);
+        }
+
         std::string campaign = StageManager::get().currentDef().campaign;
-        std::string msg = campaign + " SECURED";
-        renderText(msg, LOGICAL_W * 0.5f - (float)(msg.size() * 5.5f), 60,
-                   {255, 220, 60, alpha}, 20);
-        renderText("MISSION COMPLETE", LOGICAL_W * 0.5f - 88, 90,
-                   {255, 255, 255, alpha}, 16);
+        std::string secured  = campaign + " SECURED";
+        // Large "MISSION COMPLETE" centred near top
+        renderText("MISSION COMPLETE",
+                   LOGICAL_W * 0.5f - 118.f, 28.f,
+                   {255, 255, 255, alpha}, 26);
+        // Campaign sub-label in gold below
+        renderText(secured,
+                   LOGICAL_W * 0.5f - (float)(secured.size() * 6.5f), 64.f,
+                   {255, 215, 0, alpha}, 20);
     }
 }
 
