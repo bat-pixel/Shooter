@@ -63,6 +63,10 @@ bool Game::init() {
     m_background = std::make_unique<Background>(
         std::vector<SDL_Texture*>{m_campaignBg[0]}, 80.f);
 
+    // Atmospheric cloud sprites
+    m_cloudTex[0] = am.texture("assets/PNG/Effects/cloud_light.png");
+    m_cloudTex[1] = am.texture("assets/PNG/Effects/cloud_dark.png");
+
     // Explosion sprite (single frame, scaled to 64px at render)
     SDL_Texture* explosionTex = am.texture("assets/PNG/Effects/explosion.png");
     if (explosionTex) m_explosionFrames.push_back(explosionTex);
@@ -317,7 +321,35 @@ void Game::update(float dt) {
 
 void Game::updatePlaying(float dt) {
     m_worldY += 80.f * dt;
-    m_background->update(dt);
+
+    // Cloud scroll system — spawn and drift clouds down the screen
+    {
+        int bgIdx = std::clamp(StageManager::get().currentDef().bgIndex, 0, 7);
+        // 0,1=Midway/Marshall, 4,5=Leyte/Saipan → light; 2,3=Attu/Rabaul, 6=IwoJima → dark; 7=Tokyo → sparse light
+        int cloudType = (bgIdx == 2 || bgIdx == 3 || bgIdx == 6) ? 1 : 0;
+        float spawnInterval = (bgIdx == 7) ? 2.4f : 1.1f;
+
+        m_cloudSpawnTimer += dt;
+        if (m_cloudSpawnTimer >= spawnInterval) {
+            m_cloudSpawnTimer = 0.f;
+            if (m_cloudTex[cloudType]) {
+                CloudSprite cs;
+                cs.texIdx = cloudType;
+                cs.x      = (float)(std::rand() % (int)(LOGICAL_W + 80)) - 40.f;
+                cs.y      = -80.f;
+                cs.speed  = 25.f + (std::rand() % 20);
+                cs.scale  = 1.5f + (std::rand() % 15) * 0.1f;
+                cs.alpha  = (Uint8)(45 + std::rand() % 55);
+                m_clouds.push_back(cs);
+            }
+        }
+
+        for (auto& c : m_clouds) c.y += c.speed * dt;
+        m_clouds.erase(std::remove_if(m_clouds.begin(), m_clouds.end(),
+            [](const CloudSprite& c){ return c.y > LOGICAL_H + 120.f; }),
+            m_clouds.end());
+    }
+
     m_levelObjects.update(m_worldY, dt);
     m_player->update(dt);
 
@@ -564,7 +596,21 @@ void Game::renderPlaying() {
     const SDL_Color& c = kCampaignColor[bgIdx];
     SDL_SetRenderDrawColor(m_renderer, c.r, c.g, c.b, 255);
     SDL_RenderFillRect(m_renderer, nullptr);
-    m_background->render(m_renderer);
+
+    // Atmospheric clouds — semi-transparent, drawn before level objects
+    for (const auto& cl : m_clouds) {
+        SDL_Texture* tex = m_cloudTex[cl.texIdx];
+        if (!tex) continue;
+        float tw, th;
+        SDL_GetTextureSize(tex, &tw, &th);
+        float w = tw * cl.scale;
+        float h = th * cl.scale;
+        SDL_SetTextureAlphaMod(tex, cl.alpha);
+        SDL_FRect dst = {cl.x - w * 0.5f, cl.y, w, h};
+        SDL_RenderTexture(m_renderer, tex, nullptr, &dst);
+        SDL_SetTextureAlphaMod(tex, 255);
+    }
+
     m_levelObjects.render(m_renderer);
     m_waves.render(m_renderer);
     if (m_boss) m_boss->render(m_renderer);

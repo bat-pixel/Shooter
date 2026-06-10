@@ -22,6 +22,12 @@ struct Explosion {
     float x, y;
 };
 
+struct CloudSprite {
+    float x, y, speed, scale;
+    int   texIdx;   // 0 = light cumulus, 1 = dark storm
+    Uint8 alpha;
+};
+
 class Game {
 public:
     bool init();
@@ -71,7 +77,7 @@ private:
 
     // Carrier landing cutscene
     float m_landingTimer    = 0.f;
-    float m_landingPlaneY   = 0.f;   // current Y of the plane sprite during descent
+    float m_landingPlaneY   = 0.f;
 
     std::unique_ptr<Player>     m_player;
     std::unique_ptr<Boss>       m_boss;
@@ -83,7 +89,7 @@ private:
 
     bool m_bossSpawned = false;
 
-    std::vector<Explosion>   m_explosions;
+    std::vector<Explosion>    m_explosions;
     std::vector<SDL_Texture*> m_explosionFrames;
 
     LevelObjectManager m_levelObjects;
@@ -92,7 +98,7 @@ private:
     float        m_menuTime          = 0.f;
     int          m_selectedStage     = 32;
     SDL_Texture* m_menuBg              = nullptr;
-    SDL_Texture* m_campaignBg[8]      = {};       // one background per campaign (bgIndex 0-7)
+    SDL_Texture* m_campaignBg[8]      = {};
     SDL_Texture* m_playerBulletTex  = nullptr;
     SDL_Texture* m_enemyBulletTex   = nullptr;
     SDL_Texture* m_bossTex          = nullptr;
@@ -100,15 +106,20 @@ private:
     SDL_Texture* m_bossCruiserTex   = nullptr;
     SDL_Texture* m_bossYamatoTex    = nullptr;
     SDL_Texture* m_enemyKamikazeTex = nullptr;
-    SDL_Texture* m_carrierDeckTex   = nullptr;   // carrier landing cutscene
+    SDL_Texture* m_carrierDeckTex   = nullptr;
 
-    // Island terrain — categorized by environment type for per-campaign selection
-    std::vector<SDL_Texture*> m_terrainSmallTextures;  // kept for backward compat
-    std::vector<SDL_Texture*> m_islandsPalm;           // tropical palm islands
-    std::vector<SDL_Texture*> m_islandsAtoll;          // coral atolls
-    std::vector<SDL_Texture*> m_islandsVolcano;        // volcanic islands
-    std::vector<SDL_Texture*> m_islandsForest;         // jungle/forest islands
+    // Island terrain — categorized by environment type
+    std::vector<SDL_Texture*> m_terrainSmallTextures;
+    std::vector<SDL_Texture*> m_islandsPalm;
+    std::vector<SDL_Texture*> m_islandsAtoll;
+    std::vector<SDL_Texture*> m_islandsVolcano;
+    std::vector<SDL_Texture*> m_islandsForest;
 
-    SDL_Texture* m_terrainBigTex    = nullptr;
+    SDL_Texture* m_terrainBigTex     = nullptr;
     SDL_Texture* m_terrainCarrierTex = nullptr;
+
+    // Atmospheric cloud layer
+    SDL_Texture*            m_cloudTex[2]    = {};   // [0]=light, [1]=dark
+    std::vector<CloudSprite> m_clouds;
+    float                   m_cloudSpawnTimer = 0.f;
 };
