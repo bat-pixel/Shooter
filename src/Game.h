@@ -54,6 +54,7 @@ private:
     void spawnExplosion(float x, float y);
     void spawnBoss();
     void advanceStage();
+    void resetToMenu();
     void resetPlayer();
     void renderText(const std::string& text, float x, float y,
                     SDL_Color col, int ptSize);

@@ -271,39 +271,14 @@ void Game::handleEvents() {
         else         { m_state = GameState::STAGE_TALLY; }
     }
 
-    if (m_state == GameState::WIN && input.isPressed(Action::CONFIRM)) {
-        StageManager::get().updateHighScore(m_score);
-        m_score  = 0;
-        m_level  = 1;
-        m_state  = GameState::MENU;
-        m_waves.clear();
-        m_bullets.clear();
-        m_levelObjects.clear();
-        m_boss.reset();
-        m_bossSpawned = false;
-        m_worldY      = 0;
-        m_explosions.clear();
-        resetPlayer();
-    }
+    if (m_state == GameState::WIN && input.isPressed(Action::CONFIRM))
+        resetToMenu();
 
-    if (m_state == GameState::STAGE_TALLY && input.isPressed(Action::CONFIRM)) {
+    if (m_state == GameState::STAGE_TALLY && input.isPressed(Action::CONFIRM))
         advanceStage();
-    }
 
-    if (m_state == GameState::GAMEOVER && input.isPressed(Action::CONFIRM)) {
-        StageManager::get().updateHighScore(m_score);
-        m_score  = 0;
-        m_level  = 1;
-        m_state  = GameState::MENU;
-        m_waves.clear();
-        m_bullets.clear();
-        m_levelObjects.clear();
-        m_boss.reset();
-        m_bossSpawned = false;
-        m_worldY      = 0;
-        m_explosions.clear();
-        resetPlayer();
-    }
+    if (m_state == GameState::GAMEOVER && input.isPressed(Action::CONFIRM))
+        resetToMenu();
 }
 
 // -----------------------------------------------------------------------
@@ -315,6 +290,10 @@ void Game::update(float dt) {
     case GameState::PLAYING:          updatePlaying(dt);        break;
     case GameState::CARRIER_LANDING:  updateCarrierLanding(dt); break;
     case GameState::STAGE_TALLY:      updateStageTally(dt);     break;
+    case GameState::GAMEOVER:
+        m_landingTimer += dt;
+        if (m_landingTimer >= 2.5f) resetToMenu();
+        break;
     default: break;
     }
 }
@@ -355,6 +334,7 @@ void Game::updatePlaying(float dt) {
 
     if (!m_player->isActive()) {
         StageManager::get().updateHighScore(m_score);
+        m_landingTimer = 0.f;
         m_state = GameState::GAMEOVER;
         AudioManager::get().playSound("assets/sounds/game_over.mp3");
         return;
@@ -1007,6 +987,24 @@ void Game::advanceStage() {
     AudioManager::get().playMusic(music);
 
     m_state = GameState::PLAYING;
+}
+
+void Game::resetToMenu() {
+    StageManager::get().updateHighScore(m_score);
+    m_score       = 0;
+    m_level       = 1;
+    m_landingTimer = 0.f;
+    m_state       = GameState::MENU;
+    m_waves.clear();
+    m_bullets.clear();
+    m_levelObjects.clear();
+    m_boss.reset();
+    m_bossSpawned = false;
+    m_worldY      = 0;
+    m_explosions.clear();
+    m_clouds.clear();
+    resetPlayer();
+    AudioManager::get().stopMusic();
 }
 
 void Game::resetPlayer() {
