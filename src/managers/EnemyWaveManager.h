@@ -20,8 +20,11 @@ struct PendingFormation {
     SDL_Texture* texSet[5];
     bool         isRedSquadron;
     PowerUpType  powType;
-    float        speedMult  = 1.f;
-    float        baseAngle  = 0.f;  // 180° for south-facing sprites
+    float        speedMult    = 1.f;
+    float        baseAngle    = 0.f;  // 180° for south-facing sprites
+    bool         isSniper     = false; // aimed shots at player
+    bool         noFire       = false; // bonus stage: no shooting
+    int          forceArcSide = -1;   // -1=auto alternate, 0=force left-spawn, 1=force right-spawn
 };
 
 class EnemyWaveManager {

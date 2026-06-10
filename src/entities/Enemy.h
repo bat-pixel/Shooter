@@ -3,7 +3,7 @@
 #include <SDL3/SDL.h>
 
 enum class EnemyType { SMALL, MEDIUM, LARGE, UFO };
-enum class EnemyPattern { STRAIGHT, SINE, DIVE, ARC, LOOP_DIVE };
+enum class EnemyPattern { STRAIGHT, SINE, DIVE, ARC, LOOP_DIVE, ZIGZAG };
 
 class Enemy : public BaseEntity {
 public:
@@ -25,6 +25,9 @@ public:
     void setFormationTarget(float tx, float ty) { m_targetX = tx; m_targetY = ty; }
     void setPlayerTarget(float px, float py)   { m_playerX = px; m_playerY = py; }
     void setBaseAngle(float a)                 { m_baseAngle = a; }
+    void setSniper(bool v)                     { m_sniper = v; }
+    void setNoFire(bool v)                     { m_noFire = v; }
+    bool isSniper() const                      { return m_sniper; }
 
 private:
     SDL_Texture* m_tex;
@@ -34,7 +37,7 @@ private:
     float        m_time          = 0;
     float        m_fireTimer     = 0;
     float        m_fireRate;
-    float        m_initialX      = 0;   // SINE: anchor column
+    float        m_initialX      = 0;   // SINE/ZIGZAG: anchor column
     float        m_targetX       = 0;
     float        m_targetY       = 0;
     bool         m_inFormation   = false;
@@ -44,7 +47,7 @@ private:
     float        m_loopCenterY   = 0;
     bool         m_looping       = false; // DIVE: in circular loop phase
     bool         m_diving        = false; // DIVE: post-loop straight dive
-    // ARC / LOOP_DIVE state
+    // ARC / LOOP_DIVE / ZIGZAG state
     int          m_phase        = 0;     // generic phase counter
     float        m_phaseTimer   = 0.f;   // timer within phase
     float        m_arcForce     = 1.f;   // ARC: curve acceleration direction (+1/-1)
@@ -53,7 +56,9 @@ private:
     float        m_playerX      = 180.f; // player center X (updated each frame)
     float        m_playerY      = 320.f; // player center Y
     float        m_renderAngle  = 0.f;   // physics-derived rotation in degrees
-    float        m_baseAngle   = 0.f;   // sprite orientation offset (180° for south-facing assets)
+    float        m_baseAngle    = 0.f;   // sprite orientation offset (180° for south-facing assets)
     int          m_hp            = 1;
     int          m_maxHp         = 1;
+    bool         m_sniper        = false; // fires aimed bullets at player position
+    bool         m_noFire        = false; // bonus-stage: never fires
 };

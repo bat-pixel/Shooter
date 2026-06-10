@@ -47,28 +47,40 @@ The game counts down from stage **32** to stage **1**. Each campaign spans 4 sta
 **Boss:** Heavy Cruiser (bossIndex 3) — warship boss; sweeps aggressively side-to-side.
 
 ### Campaign 4 — Rabaul (Stages 20–17)
-**Background:** Dark volcanic ocean with ash, dense tropical jungle coastlines.  
-**Enemies:** D3A Val dive-bombers debut as a MEDIUM-class enemy with a dive-bomb attack pattern. Heavier bomber coverage.  
+**Background:** Dark volcanic ocean with ash. Volcanic islands and dense jungle coastlines.  
+**Stage 20 — Double Flankers:** Green Zeroes sweep from both screen edges simultaneously in mirrored ARC pairs, crossing mid-screen in a pincer.  
+**Stage 19 — Bonus Stage:** No enemy fire. Dense formations of fighters fill the sky — maximum shooting opportunity, no threat.  
+**Stage 18 — Double-Decker Bombers:** A 6-plane wide bomber wall drops onto the screen, double the normal formation width.  
+**Enemies:** D3A Val dive-bombers debut as a MEDIUM-class enemy with a dive-bomb attack pattern. Helen bombers replace Betty.  
 **Boss:** Heavy Cruiser II (bossIndex 4) — enraged fire rate at half HP.
 
 ### Campaign 5 — Leyte Gulf (Stages 16–13)
-**Background:** Oil-slicked battle water, burning debris, tropical island coastlines.  
-**Enemies:** Ki-49 Helen heavy bombers replace Betty from here onward. Denser carrier ship terrain. Val dive squads continue.  
+**Background:** Oil-slicked battle water, burning debris. Tropical palm and jungle islands.  
+**Stage 16 — High-Speed Scouts:** Fast black fighters cross the screen at 2.4× normal speed in SINE waves. They do not fire — pure evasion challenge.  
+**Stage 15 — Bonus Stage:** No enemy fire. ARC formations sweep from both sides in dense waves for point farming.  
+**Stage 14 — Zig-Zag Fighters:** Fighters abandon standard patterns and pivot 90° left/right as they descend — sharp, unpredictable movement.  
+**Enemies:** Ki-49 Helen heavy bombers continue. Val dive squads continue through this campaign. Kamikaze LOOP_DIVE debut.  
 **Boss:** Carrier Kaga (bossIndex 5) — large carrier boss with rapid 5-bullet spread.
 
 ### Campaign 6 — Saipan (Stages 12–9)
-**Background:** Industrial military harbor, concrete docks, Quonset hangars.  
-**Enemies:** Kamikaze formations debut (LOOP_DIVE MEDIUM class, dark blue aircraft). 1 kamikaze squad at stage 12, growing to 3 by stage 9.  
+**Background:** Industrial military harbor, concrete docks. Tropical and atoll islands.  
+**Stage 12 — Sniper Zeroes:** Fighters begin aiming their shots at your current position instead of firing straight down. Every bullet tracks you.  
+**Stage 11 — Bonus Stage:** No enemy fire. Heavy ARC and SINE formations — the last safe breathing room before the endgame.  
+**Stage 10:** Sniper aiming continues. Kamikaze pressure increases to 2 squads. Maximum mid-game challenge.  
+**Enemies:** Kamikaze squads scale from 1 (stage 12) to 3 (stage 9). All bullets are aimed from here onward.  
 **Boss:** Carrier Kaga II (bossIndex 6) — frantic fire rate at quarter HP.
 
 ### Campaign 7 — Iwo Jima (Stages 8–5)
-**Background:** Dark gray volcanic sand beach, black lava fields, ash and pumice.  
-**Enemies:** Ki-27 Nate introduced (5th fighter color, dark grey). Maximum kamikaze pressure — 3 squads per wave. Helen bombers in large numbers.  
+**Background:** Dark gray volcanic sand beach, black lava fields, ash and pumice. Volcanic islands only.  
+**Stage 8:** Complete chaos — sniper Zeroes, kamikaze dive-bombers, Helen bombers, and Val squads all active simultaneously. Nate fighters debut.  
+**Stage 7 — Final Bonus Stage:** No enemy fire. The last bonus wave in the game — maximum density, 18 formations.  
+**Stage 6 — Red Chain:** A rapid chain of 5 consecutive red formation squads (15 sniper Zeroes total) fires back-to-back with minimal gaps. Destroys all 15 for a Yashichi bonus.  
+**Enemies:** Ki-27 Nate (5th fighter color, dark grey) introduced. 3 kamikaze squads per wave. Enemy bullets faster than normal.  
 **Boss:** Battleship Yamato (bossIndex 7) — massive warship boss, high HP, aggressive sweep pattern.
 
 ### Campaign 8 — Okinawa / Tokyo (Stages 4–1)
-**Background:** Dense Tokyo city grid from above — roads, rooftops, and parks.  
-**Enemies:** Ki-43 Oscar introduced (6th fighter color, tan camo) — Okinawa-exclusive. All enemy types in play simultaneously. Maximum speed and formation density.  
+**Background:** Dense Tokyo city grid from above — roads, rooftops, and parks. No small islands; wall-to-wall carrier ships.  
+**Enemies:** Ki-43 Oscar introduced (6th fighter color, tan camo) — Okinawa-exclusive. All enemy types in play simultaneously. Maximum speed and formation density. Enemy bullets 40% faster than base speed. All fighters fire aimed sniper shots.  
 **Boss:** Battleship Yamato Final (bossIndex 8) — highest HP in the game, fastest fire rate, enrages at quarter HP.
 
 ---
@@ -104,6 +116,17 @@ The game counts down from stage **32** to stage **1**. Each campaign spans 4 sta
 | **DIVE** | Enters formation, pauses, loops, then dives at the player. |
 | **ARC** | Sweeps in from one edge, arcs across the screen, exits opposite side. |
 | **LOOP_DIVE** | Enters from above, performs a full 360° loop, then dives directly at the player. |
+| **ZIGZAG** | Alternates between descending and sharp 90° horizontal pivots — unpredictable. Leyte only. |
+
+### Special Enemy Behaviors
+
+| Behavior | Description |
+|---|---|
+| **Sniper** | Enemy bullets are aimed at your current position, not fired straight down. Active from Saipan onward. |
+| **No-Fire** | Enemy never fires. Used in bonus stages — maximum enemies, zero threat. |
+| **Double Flanker** | Two simultaneous ARC formations from both screen edges — Rabaul stage 20. |
+| **High-Speed Scout** | 2.4× speed SINE fighters that cross without firing — Leyte stage 16. |
+| **Red Chain** | 5 rapid red sniper formations spawned in 3-second succession — Iwo Jima stage 6. |
 
 ---
 

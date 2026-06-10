@@ -49,6 +49,9 @@ private:
     void renderText(const std::string& text, float x, float y,
                     SDL_Color col, int ptSize);
 
+    // Returns the appropriate island sprite set for a given campaign bgIndex
+    std::vector<SDL_Texture*> islandsForCampaign(int bgIdx) const;
+
     SDL_Window*   m_window   = nullptr;
     SDL_Renderer* m_renderer = nullptr;
     bool          m_running  = false;
@@ -90,7 +93,14 @@ private:
     SDL_Texture* m_bossCruiserTex   = nullptr;
     SDL_Texture* m_bossYamatoTex    = nullptr;
     SDL_Texture* m_enemyKamikazeTex = nullptr;
-    std::vector<SDL_Texture*> m_terrainSmallTextures;
+
+    // Island terrain — categorized by environment type for per-campaign selection
+    std::vector<SDL_Texture*> m_terrainSmallTextures;  // kept for backward compat
+    std::vector<SDL_Texture*> m_islandsPalm;           // tropical palm islands
+    std::vector<SDL_Texture*> m_islandsAtoll;          // coral atolls
+    std::vector<SDL_Texture*> m_islandsVolcano;        // volcanic islands
+    std::vector<SDL_Texture*> m_islandsForest;         // jungle/forest islands
+
     SDL_Texture* m_terrainBigTex    = nullptr;
     SDL_Texture* m_terrainCarrierTex = nullptr;
 };

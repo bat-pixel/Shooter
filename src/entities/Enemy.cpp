@@ -182,6 +182,38 @@ void Enemy::update(float dt) {
         }
         break;
     }
+
+    case EnemyPattern::ZIGZAG: {
+        // Alternating down/sideways segments — sharp 90° turns each cycle
+        static constexpr float DOWN_DUR = 0.65f;
+        static constexpr float SIDE_DUR = 0.28f;
+
+        m_phaseTimer += dt;
+
+        if (m_phase % 2 == 0) {
+            // Descending segment — wait until on-screen before pivoting
+            m_y += m_velY * dt;
+            m_renderAngle = 0.f;
+            if (m_phaseTimer >= DOWN_DUR && m_y >= -m_h) {
+                m_phaseTimer = 0.f;
+                m_phase++;
+            }
+        } else {
+            // Sideways segment — alternate direction each pair of sideways phases
+            // Left-spawned planes start going right; right-spawned start going left
+            float baseDir = (m_initialX < LOGICAL_W * 0.5f) ? 1.f : -1.f;
+            float dir = ((m_phase % 4) == 1) ? baseDir : -baseDir;
+            m_x += dir * m_velY * 0.8f * dt;
+            m_renderAngle = dir > 0.f ? 90.f : -90.f;
+            if (m_phaseTimer >= SIDE_DUR) {
+                m_phaseTimer = 0.f;
+                m_phase++;
+            }
+            if (m_x < -m_w * 2.f || m_x > LOGICAL_W + m_w * 2.f) m_active = false;
+        }
+        break;
+    }
+
     } // end switch
 
     m_fireTimer += dt;
@@ -198,6 +230,7 @@ bool Enemy::hit() {
 }
 
 bool Enemy::tryFire(float /*dt*/) {
+    if (m_noFire) return false;
     if (m_fireTimer >= m_fireRate) {
         m_fireTimer = 0;
         return true;

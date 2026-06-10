@@ -113,29 +113,35 @@ bool Game::init() {
     // Boss
     m_bossTex = am.texture("assets/PNG/Enemies/bossAyako.png");
 
-    // Terrain objects (islands + carrier ships)
+    // Terrain objects — islands categorized by environment type
     m_terrainBigTex     = am.texture("assets/PNG/Terrain/big_island.png");
     m_terrainCarrierTex = am.texture("assets/PNG/Terrain/carrier_ship.png");
-    for (const char* path : {
-        "assets/PNG/Terrain/small_island.png",
-        "assets/PNG/Terrain/island_palm_round.png",
-        "assets/PNG/Terrain/island_palm_irregular.png",
-        "assets/PNG/Terrain/island_palm_large.png",
-        "assets/PNG/Terrain/island_palm_oval.png",
-        "assets/PNG/Terrain/island_atoll_ring.png",
-        "assets/PNG/Terrain/island_atoll_small.png",
-        "assets/PNG/Terrain/island_atoll_sandy.png",
-        "assets/PNG/Terrain/island_atoll_wreath.png",
-        "assets/PNG/Terrain/island_volcano_mountain.png",
-        "assets/PNG/Terrain/island_volcano_erupting.png",
-        "assets/PNG/Terrain/island_volcano_crater.png",
-        "assets/PNG/Terrain/island_forest_round.png",
-        "assets/PNG/Terrain/island_forest_dark.png",
-        "assets/PNG/Terrain/island_forest_rocky.png",
-        "assets/PNG/Terrain/island_forest_dome.png",
-    }) {
-        if (SDL_Texture* t = am.texture(path)) m_terrainSmallTextures.push_back(t);
-    }
+
+    auto loadIsland = [&](const char* path, std::vector<SDL_Texture*>& group) {
+        if (SDL_Texture* t = am.texture(path)) { group.push_back(t); m_terrainSmallTextures.push_back(t); }
+    };
+    // Tropical palm islands
+    loadIsland("assets/PNG/Terrain/island_palm_round.png",      m_islandsPalm);
+    loadIsland("assets/PNG/Terrain/island_palm_irregular.png",  m_islandsPalm);
+    loadIsland("assets/PNG/Terrain/island_palm_large.png",      m_islandsPalm);
+    loadIsland("assets/PNG/Terrain/island_palm_oval.png",       m_islandsPalm);
+    // Coral atolls
+    loadIsland("assets/PNG/Terrain/island_atoll_ring.png",      m_islandsAtoll);
+    loadIsland("assets/PNG/Terrain/island_atoll_small.png",     m_islandsAtoll);
+    loadIsland("assets/PNG/Terrain/island_atoll_sandy.png",     m_islandsAtoll);
+    loadIsland("assets/PNG/Terrain/island_atoll_wreath.png",    m_islandsAtoll);
+    // Volcanic islands
+    loadIsland("assets/PNG/Terrain/island_volcano_mountain.png",m_islandsVolcano);
+    loadIsland("assets/PNG/Terrain/island_volcano_erupting.png",m_islandsVolcano);
+    loadIsland("assets/PNG/Terrain/island_volcano_crater.png",  m_islandsVolcano);
+    // Forest / jungle islands
+    loadIsland("assets/PNG/Terrain/island_forest_round.png",    m_islandsForest);
+    loadIsland("assets/PNG/Terrain/island_forest_dark.png",     m_islandsForest);
+    loadIsland("assets/PNG/Terrain/island_forest_rocky.png",    m_islandsForest);
+    loadIsland("assets/PNG/Terrain/island_forest_dome.png",     m_islandsForest);
+    // Fallback: generic small island (added to master list only)
+    if (SDL_Texture* t = am.texture("assets/PNG/Terrain/small_island.png"))
+        m_terrainSmallTextures.push_back(t);
 
     // HUD — use P-38 sprite as life icon
     TTF_Font* font    = am.font("assets/Bonus/kenvector_future.ttf", 16);
@@ -231,7 +237,7 @@ void Game::handleEvents() {
             m_worldY = 0;
             m_waves.resetKillStats();
             { int bg = StageManager::get().currentDef().bgIndex;
-              m_levelObjects.startStage(bg, m_terrainSmallTextures, m_terrainBigTex, m_terrainCarrierTex);
+              m_levelObjects.startStage(bg, islandsForCampaign(bg), m_terrainBigTex, m_terrainCarrierTex);
               m_background->setTextures({m_campaignBg[bg]}); }
             m_state = GameState::PLAYING;
             m_waves.startWave(StageManager::get().currentStage());
@@ -246,7 +252,7 @@ void Game::handleEvents() {
         m_worldY = 0;
         m_waves.resetKillStats();
         { int bg = StageManager::get().currentDef().bgIndex;
-          m_levelObjects.startStage(bg, m_terrainSmallTextures, m_terrainBigTex, m_terrainCarrierTex);
+          m_levelObjects.startStage(bg, islandsForCampaign(bg), m_terrainBigTex, m_terrainCarrierTex);
           m_background->setTextures({m_campaignBg[bg]}); }
         m_state = GameState::PLAYING;
         m_waves.startWave(StageManager::get().currentStage());
@@ -286,6 +292,7 @@ void Game::update(float dt) {
 
 void Game::updatePlaying(float dt) {
     m_worldY += 80.f * dt;
+    m_background->update(dt);
     m_levelObjects.update(m_worldY, dt);
     m_player->update(dt);
 
@@ -334,13 +341,31 @@ void Game::updatePlaying(float dt) {
     if (!m_player->isBulletFrozen()) {
         static float enemyFireSoundTimer = 0;
         enemyFireSoundTimer -= dt;
+
+        // Bullet speed ramps up in late campaigns
+        int curStage = StageManager::get().currentStage();
+        float bulletSpeed = ENEMY_BULLET_SPEED;
+        if (curStage <= 6) bulletSpeed *= 1.25f;
+        if (curStage <= 3) bulletSpeed *= 1.40f;
+
         for (auto& enemy : m_waves.enemies()) {
             if (!enemy->isActive()) continue;
             if (enemy->tryFire(dt)) {
-                m_bullets.spawnEnemy(
-                    enemy->bounds().x + enemy->bounds().w * 0.5f,
-                    enemy->bounds().y + enemy->bounds().h,
-                    0, ENEMY_BULLET_SPEED, m_enemyBulletTex);
+                float ex = enemy->bounds().x + enemy->bounds().w * 0.5f;
+                float ey = enemy->bounds().y + enemy->bounds().h;
+                float vx = 0.f, vy = bulletSpeed;
+
+                if (enemy->isSniper()) {
+                    float pcx = m_player->bounds().x + m_player->bounds().w * 0.5f;
+                    float pcy = m_player->bounds().y + m_player->bounds().h * 0.5f;
+                    float dx = pcx - ex, dy = pcy - ey;
+                    float len = std::sqrtf(dx*dx + dy*dy);
+                    if (len < 1.f) { dx = 0.f; dy = 1.f; len = 1.f; }
+                    vx = (dx / len) * bulletSpeed;
+                    vy = (dy / len) * bulletSpeed;
+                }
+
+                m_bullets.spawnEnemy(ex, ey, vx, vy, m_enemyBulletTex);
                 if (enemyFireSoundTimer <= 0) {
                     AudioManager::get().playSound("assets/sounds/shoot_enemy.mp3");
                     enemyFireSoundTimer = 0.12f;
@@ -480,6 +505,7 @@ void Game::renderPlaying() {
     const SDL_Color& c = kCampaignColor[bgIdx];
     SDL_SetRenderDrawColor(m_renderer, c.r, c.g, c.b, 255);
     SDL_RenderFillRect(m_renderer, nullptr);
+    m_background->render(m_renderer);
     m_levelObjects.render(m_renderer);
     m_waves.render(m_renderer);
     if (m_boss) m_boss->render(m_renderer);
@@ -673,6 +699,28 @@ void Game::spawnBoss() {
     AudioManager::get().playMusic("assets/sounds/bgm_boss.mp3");
 }
 
+std::vector<SDL_Texture*> Game::islandsForCampaign(int bgIdx) const {
+    std::vector<SDL_Texture*> result;
+    auto add = [&](const std::vector<SDL_Texture*>& src) {
+        result.insert(result.end(), src.begin(), src.end());
+    };
+    switch (bgIdx) {
+    case 0: add(m_islandsPalm);   add(m_islandsAtoll);   break;  // Midway: tropical + atolls
+    case 1: add(m_islandsAtoll);  add(m_islandsPalm);    break;  // Marshall: atolls + palms
+    case 2: add(m_islandsForest); add(m_islandsAtoll);   break;  // Attu: rocky forest + atolls
+    case 3: add(m_islandsVolcano);add(m_islandsForest);  break;  // Rabaul: volcanic + jungle
+    case 4: add(m_islandsPalm);   add(m_islandsForest);  break;  // Leyte: palm + jungle
+    case 5: add(m_islandsPalm);   add(m_islandsAtoll);   break;  // Saipan: tropical military
+    case 6: add(m_islandsVolcano);                        break;  // Iwo Jima: volcanic only
+    case 7: /* Tokyo: no small islands (all carriers in area7 script) */  break;
+    default:add(m_terrainSmallTextures);                  break;
+    }
+    // Fallback: if nothing loaded yet, return master list
+    if (result.empty() && !m_terrainSmallTextures.empty())
+        result = m_terrainSmallTextures;
+    return result;
+}
+
 void Game::advanceStage() {
     StageManager::get().advance();
     ++m_level;
@@ -680,12 +728,12 @@ void Game::advanceStage() {
     m_worldY = 0;
     int area = StageManager::get().currentDef().bgIndex;
     m_levelObjects.startStage(area,
-        m_terrainSmallTextures, m_terrainBigTex, m_terrainCarrierTex);
+        islandsForCampaign(area), m_terrainBigTex, m_terrainCarrierTex);
     m_background->setTextures({m_campaignBg[area]});
 
     m_player->resetForNewStage();
     m_waves.resetKillStats();
-    m_waves.startWave(m_level);
+    m_waves.startWave(StageManager::get().currentStage());
 
     const char* music;
     if (StageManager::get().currentDef().hasBoss)
