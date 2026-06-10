@@ -327,7 +327,7 @@ void Game::updatePlaying(float dt) {
         int bgIdx = std::clamp(StageManager::get().currentDef().bgIndex, 0, 7);
         // 0,1=Midway/Marshall, 4,5=Leyte/Saipan → light; 2,3=Attu/Rabaul, 6=IwoJima → dark; 7=Tokyo → sparse light
         int cloudType = (bgIdx == 2 || bgIdx == 3 || bgIdx == 6) ? 1 : 0;
-        float spawnInterval = (bgIdx == 7) ? 2.4f : 1.1f;
+        float spawnInterval = (bgIdx == 7) ? 6.0f : 3.0f;
 
         m_cloudSpawnTimer += dt;
         if (m_cloudSpawnTimer >= spawnInterval) {
@@ -597,7 +597,10 @@ void Game::renderPlaying() {
     SDL_SetRenderDrawColor(m_renderer, c.r, c.g, c.b, 255);
     SDL_RenderFillRect(m_renderer, nullptr);
 
-    // Atmospheric clouds — semi-transparent, drawn before level objects
+    // Islands / terrain — sea level, drawn first
+    m_levelObjects.render(m_renderer);
+
+    // Clouds — atmospheric layer above the sea, below the aircraft
     for (const auto& cl : m_clouds) {
         SDL_Texture* tex = m_cloudTex[cl.texIdx];
         if (!tex) continue;
@@ -611,7 +614,6 @@ void Game::renderPlaying() {
         SDL_SetTextureAlphaMod(tex, 255);
     }
 
-    m_levelObjects.render(m_renderer);
     m_waves.render(m_renderer);
     if (m_boss) m_boss->render(m_renderer);
     m_bullets.render(m_renderer);
