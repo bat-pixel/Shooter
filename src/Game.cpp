@@ -322,7 +322,7 @@ void Game::updatePlaying(float dt) {
                 CloudSprite cs;
                 cs.texIdx = cloudType;
                 cs.x      = (float)(std::rand() % (int)(LOGICAL_W + 80)) - 40.f;
-                cs.y      = -80.f;
+                cs.y      = -220.f;  // start well above screen so fade-in is invisible
                 cs.speed  = 25.f + (std::rand() % 20);
                 cs.scale  = 1.5f + (std::rand() % 15) * 0.1f;
                 cs.alpha  = (Uint8)(45 + std::rand() % 55);
@@ -598,7 +598,10 @@ void Game::renderPlaying() {
         SDL_GetTextureSize(tex, &tw, &th);
         float w = tw * cl.scale;
         float h = th * cl.scale;
-        SDL_SetTextureAlphaMod(tex, cl.alpha);
+        // Fade in as the cloud crosses the top edge (-220 → 0 = invisible → full alpha)
+        float fadeT  = std::clamp((cl.y + 220.f) / 220.f, 0.f, 1.f);
+        Uint8 alpha  = (Uint8)(cl.alpha * fadeT);
+        SDL_SetTextureAlphaMod(tex, alpha);
         SDL_FRect dst = {cl.x - w * 0.5f, cl.y, w, h};
         SDL_RenderTexture(m_renderer, tex, nullptr, &dst);
         SDL_SetTextureAlphaMod(tex, 255);
