@@ -15,7 +15,7 @@
 #include "rendering/SpriteAnimation.h"
 #include "rendering/HUD.h"
 
-enum class GameState { MENU, LEVEL_SELECT, PLAYING, PAUSED, STAGE_TALLY, GAMEOVER };
+enum class GameState { MENU, LEVEL_SELECT, PLAYING, PAUSED, CARRIER_LANDING, STAGE_TALLY, GAMEOVER };
 
 struct Explosion {
     SpriteAnimation anim;
@@ -34,11 +34,13 @@ private:
     void render();
 
     void updatePlaying(float dt);
+    void updateCarrierLanding(float dt);
     void updateStageTally(float dt);
     void renderMenu();
     void renderLevelSelect();
     void renderPlaying();
     void renderPaused();
+    void renderCarrierLanding();
     void renderStageTally();
     void renderGameOver();
 
@@ -65,6 +67,10 @@ private:
     int   m_stageKillCount    = 0;
     int   m_stageTotalEnemies = 0;
     bool  m_tallyBonusAdded   = false;
+
+    // Carrier landing cutscene
+    float m_landingTimer    = 0.f;
+    float m_landingPlaneY   = 0.f;   // current Y of the plane sprite during descent
 
     std::unique_ptr<Player>     m_player;
     std::unique_ptr<Boss>       m_boss;
@@ -93,6 +99,7 @@ private:
     SDL_Texture* m_bossCruiserTex   = nullptr;
     SDL_Texture* m_bossYamatoTex    = nullptr;
     SDL_Texture* m_enemyKamikazeTex = nullptr;
+    SDL_Texture* m_carrierDeckTex   = nullptr;   // carrier landing cutscene
 
     // Island terrain — categorized by environment type for per-campaign selection
     std::vector<SDL_Texture*> m_terrainSmallTextures;  // kept for backward compat

@@ -111,7 +111,8 @@ bool Game::init() {
     m_enemyBulletTex  = am.texture("assets/PNG/Lasers/enemyBullet.png");
 
     // Boss
-    m_bossTex = am.texture("assets/PNG/Enemies/bossAyako.png");
+    m_bossTex       = am.texture("assets/PNG/Enemies/bossAyako.png");
+    m_carrierDeckTex = am.texture("assets/PNG/Terrain/carrier_landing.png");
 
     // Terrain objects — islands categorized by environment type
     m_terrainBigTex     = am.texture("assets/PNG/Terrain/big_island.png");
@@ -259,6 +260,11 @@ void Game::handleEvents() {
         AudioManager::get().playMusic("assets/sounds/bgm_stage.mp3");
     }
 
+    // Allow skipping the landing cutscene with Enter
+    if (m_state == GameState::CARRIER_LANDING && input.isPressed(Action::CONFIRM)) {
+        m_state = GameState::STAGE_TALLY;
+    }
+
     if (m_state == GameState::STAGE_TALLY && input.isPressed(Action::CONFIRM)) {
         advanceStage();
     }
@@ -284,8 +290,9 @@ void Game::update(float dt) {
     switch (m_state) {
     case GameState::MENU:
     case GameState::LEVEL_SELECT: m_menuTime += dt;     break;
-    case GameState::PLAYING:     updatePlaying(dt);     break;
-    case GameState::STAGE_TALLY: updateStageTally(dt);  break;
+    case GameState::PLAYING:          updatePlaying(dt);        break;
+    case GameState::CARRIER_LANDING:  updateCarrierLanding(dt); break;
+    case GameState::STAGE_TALLY:      updateStageTally(dt);     break;
     default: break;
     }
 }
@@ -461,8 +468,38 @@ void Game::updatePlaying(float dt) {
             m_bullets.clear();
             m_boss.reset();
             m_bossSpawned = false;
-            m_state = GameState::STAGE_TALLY;
+            // Boss stages get the carrier landing cutscene; non-boss stages skip straight to tally
+            if (StageManager::get().currentDef().hasBoss) {
+                m_landingTimer  = 0.f;
+                m_landingPlaneY = -80.f;
+                m_state = GameState::CARRIER_LANDING;
+            } else {
+                m_state = GameState::STAGE_TALLY;
+            }
         }
+    }
+}
+
+void Game::updateCarrierLanding(float dt) {
+    m_landingTimer += dt;
+
+    // Plane descends from off-screen top to the carrier deck over 2 seconds
+    static constexpr float DESCENT_DUR = 2.0f;
+    static constexpr float HOLD_DUR    = 1.2f;  // pause on deck before tally
+    static constexpr float TOTAL_DUR   = DESCENT_DUR + HOLD_DUR;
+
+    float landY = LOGICAL_H * 0.60f;  // Y where the plane touches down on the carrier
+    if (m_landingTimer < DESCENT_DUR) {
+        float t = m_landingTimer / DESCENT_DUR;
+        // Ease-out: slow approach as it nears the deck
+        t = 1.f - (1.f - t) * (1.f - t);
+        m_landingPlaneY = -80.f + t * (landY - (-80.f));
+    } else {
+        m_landingPlaneY = landY;
+    }
+
+    if (m_landingTimer >= TOTAL_DUR) {
+        m_state = GameState::STAGE_TALLY;
     }
 }
 
@@ -480,9 +517,10 @@ void Game::render() {
     switch (m_state) {
     case GameState::MENU:        renderMenu();        break;
     case GameState::LEVEL_SELECT:renderLevelSelect(); break;
-    case GameState::PLAYING:     renderPlaying();     break;
-    case GameState::PAUSED:      renderPaused();      break;
-    case GameState::STAGE_TALLY: renderStageTally();  break;
+    case GameState::PLAYING:         renderPlaying();        break;
+    case GameState::PAUSED:          renderPaused();         break;
+    case GameState::CARRIER_LANDING: renderCarrierLanding(); break;
+    case GameState::STAGE_TALLY:     renderStageTally();     break;
     case GameState::GAMEOVER:    renderGameOver();    break;
     }
 
@@ -618,6 +656,66 @@ void Game::renderPaused() {
     SDL_FRect overlay = {0, 0, (float)LOGICAL_W, (float)LOGICAL_H};
     SDL_RenderFillRect(m_renderer, &overlay);
     renderText("PAUSED", LOGICAL_W * 0.5f - 40, LOGICAL_H * 0.5f - 14, {255, 255, 255, 255}, 20);
+}
+
+void Game::renderCarrierLanding() {
+    // Ocean fill beneath carrier
+    SDL_SetRenderDrawColor(m_renderer, 15, 55, 100, 255);
+    SDL_RenderFillRect(m_renderer, nullptr);
+
+    // Carrier deck — fill most of the screen width, centered vertically in lower half
+    float deckW = (float)LOGICAL_W;
+    float deckH = deckW * 0.55f;
+    float deckX = 0.f;
+    float deckY = LOGICAL_H * 0.42f;
+
+    if (m_carrierDeckTex) {
+        SDL_FRect deckDst = {deckX, deckY, deckW, deckH};
+        SDL_RenderTexture(m_renderer, m_carrierDeckTex, nullptr, &deckDst);
+    } else {
+        // Fallback: draw a simple carrier shape with SDL primitives
+        SDL_SetRenderDrawColor(m_renderer, 70, 75, 80, 255);
+        SDL_FRect deck = {0, deckY, deckW, deckH};
+        SDL_RenderFillRect(m_renderer, &deck);
+        // Centerline stripe
+        SDL_SetRenderDrawColor(m_renderer, 220, 220, 200, 255);
+        SDL_FRect stripe = {deckX + deckW * 0.47f, deckY, 8, deckH};
+        SDL_RenderFillRect(m_renderer, &stripe);
+        // Arresting wires (3 horizontal lines across deck)
+        SDL_SetRenderDrawColor(m_renderer, 180, 160, 60, 255);
+        for (int i = 1; i <= 3; ++i) {
+            float wy = deckY + deckH * (0.25f + i * 0.12f);
+            SDL_FRect wire = {deckX + 10, wy, deckW - 20, 3};
+            SDL_RenderFillRect(m_renderer, &wire);
+        }
+        // Island superstructure
+        SDL_SetRenderDrawColor(m_renderer, 90, 85, 80, 255);
+        SDL_FRect island = {deckX + deckW * 0.72f, deckY + 8, 40, 60};
+        SDL_RenderFillRect(m_renderer, &island);
+    }
+
+    // Player plane descending onto the carrier
+    SDL_Texture* planeTex = AssetManager::get().texture("assets/PNG/playerShip_p38.png");
+    if (planeTex) {
+        float pw, ph;
+        SDL_GetTextureSize(planeTex, &pw, &ph);
+        float scale = 1.5f;
+        float pw2 = pw * scale, ph2 = ph * scale;
+        float px = LOGICAL_W * 0.5f - pw2 * 0.5f;
+        SDL_FRect planeDst = {px, m_landingPlaneY, pw2, ph2};
+        SDL_RenderTexture(m_renderer, planeTex, nullptr, &planeDst);
+    }
+
+    // "MISSION COMPLETE" banner — fades in after 0.5s
+    if (m_landingTimer > 0.5f) {
+        Uint8 alpha = (Uint8)std::min(255.f, (m_landingTimer - 0.5f) * 300.f);
+        std::string campaign = StageManager::get().currentDef().campaign;
+        std::string msg = campaign + " SECURED";
+        renderText(msg, LOGICAL_W * 0.5f - (float)(msg.size() * 5.5f), 60,
+                   {255, 220, 60, alpha}, 20);
+        renderText("MISSION COMPLETE", LOGICAL_W * 0.5f - 88, 90,
+                   {255, 255, 255, alpha}, 16);
+    }
 }
 
 void Game::renderStageTally() {
