@@ -262,7 +262,24 @@ void Game::handleEvents() {
 
     // Allow skipping the landing cutscene with Enter
     if (m_state == GameState::CARRIER_LANDING && input.isPressed(Action::CONFIRM)) {
-        m_state = GameState::STAGE_TALLY;
+        bool isFinal = (StageManager::get().currentStage() == 1);
+        if (isFinal) { StageManager::get().updateHighScore(m_score); m_state = GameState::WIN; }
+        else         { m_state = GameState::STAGE_TALLY; }
+    }
+
+    if (m_state == GameState::WIN && input.isPressed(Action::CONFIRM)) {
+        StageManager::get().updateHighScore(m_score);
+        m_score  = 0;
+        m_level  = 1;
+        m_state  = GameState::MENU;
+        m_waves.clear();
+        m_bullets.clear();
+        m_levelObjects.clear();
+        m_boss.reset();
+        m_bossSpawned = false;
+        m_worldY      = 0;
+        m_explosions.clear();
+        resetPlayer();
     }
 
     if (m_state == GameState::STAGE_TALLY && input.isPressed(Action::CONFIRM)) {
@@ -289,7 +306,8 @@ void Game::handleEvents() {
 void Game::update(float dt) {
     switch (m_state) {
     case GameState::MENU:
-    case GameState::LEVEL_SELECT: m_menuTime += dt;     break;
+    case GameState::LEVEL_SELECT:
+    case GameState::WIN:          m_menuTime += dt;     break;
     case GameState::PLAYING:          updatePlaying(dt);        break;
     case GameState::CARRIER_LANDING:  updateCarrierLanding(dt); break;
     case GameState::STAGE_TALLY:      updateStageTally(dt);     break;
@@ -499,7 +517,9 @@ void Game::updateCarrierLanding(float dt) {
     }
 
     if (m_landingTimer >= TOTAL_DUR) {
-        m_state = GameState::STAGE_TALLY;
+        bool isFinal = (StageManager::get().currentStage() == 1);
+        if (isFinal) { StageManager::get().updateHighScore(m_score); m_state = GameState::WIN; }
+        else         { m_state = GameState::STAGE_TALLY; }
     }
 }
 
@@ -521,6 +541,7 @@ void Game::render() {
     case GameState::PAUSED:          renderPaused();         break;
     case GameState::CARRIER_LANDING: renderCarrierLanding(); break;
     case GameState::STAGE_TALLY:     renderStageTally();     break;
+    case GameState::WIN:             renderWin();            break;
     case GameState::GAMEOVER:    renderGameOver();    break;
     }
 
@@ -769,6 +790,84 @@ void Game::renderGameOver() {
     std::string sc = "SCORE  " + std::to_string(m_score);
     renderText(sc, LOGICAL_W * 0.5f - 60, 310, {255, 255, 255, 255}, 20);
     renderText("PRESS ENTER", LOGICAL_W * 0.5f - 55, 360, {200, 200, 200, 255}, 16);
+}
+
+void Game::renderWin() {
+    // Intro screen as backdrop
+    if (m_menuBg) {
+        SDL_FRect dst = {0, 0, (float)LOGICAL_W, (float)LOGICAL_H};
+        SDL_RenderTexture(m_renderer, m_menuBg, nullptr, &dst);
+    }
+
+    // Vignette overlay — dark edges, bright center
+    SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 160);
+    SDL_RenderFillRect(m_renderer, nullptr);
+
+    float cx = LOGICAL_W * 0.5f;
+
+    // Gold ribbon behind the title
+    SDL_SetRenderDrawColor(m_renderer, 160, 120, 0, 200);
+    SDL_FRect ribbon = {0, 84, (float)LOGICAL_W, 54};
+    SDL_RenderFillRect(m_renderer, &ribbon);
+    SDL_SetRenderDrawColor(m_renderer, 255, 215, 0, 220);
+    SDL_FRect ribbonTop = {0, 84, (float)LOGICAL_W, 3};
+    SDL_FRect ribbonBot = {0, 135, (float)LOGICAL_W, 3};
+    SDL_RenderFillRect(m_renderer, &ribbonTop);
+    SDL_RenderFillRect(m_renderer, &ribbonBot);
+
+    // Main title
+    renderText("VICTORY!", cx - 56, 92, {255, 240, 80, 255}, 30);
+
+    // Subtitle
+    renderText("PROMOTED TO GENERAL", cx - 95, 148, {255, 200, 60, 255}, 16);
+
+    // Horizontal rule
+    SDL_SetRenderDrawColor(m_renderer, 200, 160, 40, 180);
+    SDL_FRect sep = {30, 178, LOGICAL_W - 60, 2};
+    SDL_RenderFillRect(m_renderer, &sep);
+
+    // Campaign cleared line
+    renderText("ALL 8 CAMPAIGNS CLEARED", cx - 110, 190, {200, 230, 255, 255}, 16);
+
+    // Final score
+    std::string scoreStr = "FINAL SCORE   " + std::to_string(m_score);
+    renderText(scoreStr, cx - (float)(scoreStr.size() * 5.f), 220, {255, 255, 255, 255}, 18);
+
+    // Hi-score line
+    int hi = StageManager::get().highScore();
+    if (hi > 0) {
+        std::string hsStr = "HI-SCORE   " + std::to_string(hi);
+        renderText(hsStr, cx - (float)(hsStr.size() * 4.5f), 248, {255, 215, 0, 220}, 16);
+    }
+
+    // Rank badge
+    const char* rankLabel;
+    SDL_Color   rankCol;
+    if      (m_score >= 500000) { rankLabel = "S  ACE OF ACES";      rankCol = {255, 100, 100, 255}; }
+    else if (m_score >= 300000) { rankLabel = "A  WING COMMANDER";   rankCol = {255, 180,  60, 255}; }
+    else if (m_score >= 150000) { rankLabel = "B  SQUADRON LEADER";  rankCol = {120, 220, 120, 255}; }
+    else                        { rankLabel = "C  FLIGHT OFFICER";   rankCol = {160, 200, 255, 255}; }
+
+    SDL_SetRenderDrawColor(m_renderer, rankCol.r/4, rankCol.g/4, rankCol.b/4, 200);
+    SDL_FRect rankBox = {cx - 100, 278, 200, 30};
+    SDL_RenderFillRect(m_renderer, &rankBox);
+    SDL_SetRenderDrawColor(m_renderer, rankCol.r, rankCol.g, rankCol.b, 200);
+    SDL_RenderRect(m_renderer, &rankBox);
+    renderText("RANK", cx - 96, 283, rankCol, 11);
+    renderText(rankLabel, cx - 60, 283, rankCol, 14);
+
+    // Carrier deck thumbnail if available — small decorative image
+    if (m_carrierDeckTex) {
+        SDL_FRect mini = {cx - 55, 322, 110, 44};
+        SDL_RenderTexture(m_renderer, m_carrierDeckTex, nullptr, &mini);
+        SDL_SetRenderDrawColor(m_renderer, 200, 180, 100, 120);
+        SDL_RenderRect(m_renderer, &mini);
+    }
+
+    // Pulsing "press enter" prompt
+    float pulse = 0.5f + 0.5f * std::sinf(m_menuTime * 3.2f);
+    Uint8 pa = (Uint8)(130 + 125 * pulse);
+    renderText("PRESS ENTER TO RETURN", cx - 100, 378, {255, 215, 0, pa}, 14);
 }
 
 // -----------------------------------------------------------------------

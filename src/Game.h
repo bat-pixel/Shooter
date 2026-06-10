@@ -15,7 +15,7 @@
 #include "rendering/SpriteAnimation.h"
 #include "rendering/HUD.h"
 
-enum class GameState { MENU, LEVEL_SELECT, PLAYING, PAUSED, CARRIER_LANDING, STAGE_TALLY, GAMEOVER };
+enum class GameState { MENU, LEVEL_SELECT, PLAYING, PAUSED, CARRIER_LANDING, STAGE_TALLY, WIN, GAMEOVER };
 
 struct Explosion {
     SpriteAnimation anim;
@@ -42,6 +42,7 @@ private:
     void renderPaused();
     void renderCarrierLanding();
     void renderStageTally();
+    void renderWin();
     void renderGameOver();
 
     void spawnExplosion(float x, float y);
