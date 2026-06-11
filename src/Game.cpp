@@ -625,7 +625,8 @@ void Game::renderPlaying() {
                   StageManager::get().currentStage(),
                   m_player->shieldLevel(),
                   m_player->loopsRemaining(),
-                  StageManager::get().highScore());
+                  StageManager::get().highScore(),
+                  StageManager::get().currentDef().campaign);
 
     if (m_player->godMode())
         renderText("TRAINING", 4, LOGICAL_H * 0.5f - 8, {255, 80, 80, 200}, 14);

@@ -9,7 +9,8 @@ public:
 
     void render(SDL_Renderer* renderer,
                 int score, int lives, int stage, int shieldLevel,
-                int loopsRemaining, int highScore);
+                int loopsRemaining, int highScore,
+                const std::string& campaign);
 
 private:
     void renderText(SDL_Renderer* r, const std::string& text,
