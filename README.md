@@ -19,7 +19,7 @@ You pilot a Lockheed P-38 Lightning through 32 stages across 8 Pacific campaigns
 | X / Shift | Barrel roll (Loop) |
 | P / Escape | Pause |
 | Enter | Confirm / Start |
-| T | Toggle training mode / Level select (from menu) |
+| T | Level select (from menu or stage tally) / Toggle god mode (in-game) |
 
 ### Barrel Roll (Loop)
 
@@ -173,6 +173,19 @@ After each stage clears, a tally screen shows:
 
 ---
 
+## HUD
+
+| Location | Content |
+|---|---|
+| Top-left | Current score |
+| Top-centre | Hi-score (persisted between sessions) |
+| Top-right | Remaining lives (plane icons) |
+| Bottom-left | Loop charge bars + **LOOP** label |
+| Bottom-centre | Campaign name |
+| Bottom-right | Stage number |
+
+---
+
 ## Scoring
 
 | Event | Points |
@@ -185,17 +198,27 @@ After each stage clears, a tally screen shows:
 | Loop bonus (per charge) | 1,000 |
 | Perfect stage bonus | 50,000 |
 
+The high score is saved to `highscore.dat` next to the executable and reloaded automatically on startup.
+
 ---
 
 ## Building
 
-**Requirements:** Windows, MSVC, SDL3, SDL3_image, SDL3_mixer, SDL3_ttf.
+**Requirements:** Windows, MSVC, SDL3, SDL3_image, SDL3_mixer, SDL3_ttf (via vcpkg).
 
 ```
 msbuild Shooter.vcxproj /p:Configuration=Debug /p:Platform=x64
 ```
 
 Output: `x64/Debug/Shooter.exe`
+
+### Release / distribution
+
+```powershell
+.\tools\make_dist.ps1
+```
+
+Builds Release|x64 (LTCG, no PDB), copies the exe, DLLs, and assets into `dist\SkyFirePatrol_<githash>\`, and zips it.
 
 The game uses a 360×640 logical canvas with `SDL_LOGICAL_PRESENTATION_LETTERBOX` — it scales to any window size while maintaining aspect ratio.
 
