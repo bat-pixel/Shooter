@@ -281,6 +281,13 @@ void Game::handleEvents() {
     if (m_state == GameState::STAGE_TALLY && input.isPressed(Action::CONFIRM))
         advanceStage();
 
+    if (m_state == GameState::STAGE_TALLY && input.isPressed(Action::TRAINING)) {
+        m_tallyTimer = 0.f;
+        m_tallyBonusAdded = false;
+        resetToMenu();
+        m_state = GameState::LEVEL_SELECT;
+    }
+
     if (m_state == GameState::GAMEOVER && input.isPressed(Action::CONFIRM))
         resetToMenu();
 }
