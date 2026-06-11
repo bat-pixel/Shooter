@@ -152,7 +152,7 @@ void EnemyWaveManager::startWave(int stageNumber) {
 
     // Fighter color sets: black/red/blue (all), +ZeroGreen (stage≤24), +Nate (stage≤8), +Oscar (stage≤4)
     SDL_Texture** zeroSets[6]   = { m_enemyBlack, m_enemyRed, m_enemyBlue, m_enemyZeroGreen, m_enemyNate, m_enemyOscar };
-    float         zeroAngles[6] = { 0.f,          0.f,        0.f,         0.f,              0.f,         180.f        };
+    float         zeroAngles[6] = { 180.f,        180.f,      180.f,       180.f,            180.f,       180.f        };
     int numColorSets = (stageNumber <= 4) ? 6 : (stageNumber <= 8) ? 5 : (stageNumber <= 24) ? 4 : 3;
     int zeroFormIdx = 0;
 
@@ -174,7 +174,7 @@ void EnemyWaveManager::startWave(int stageNumber) {
             pf.pattern       = EnemyPattern::STRAIGHT;
             pf.isRedSquadron = false;
             pf.powType       = PowerUpType::EXTRA_LIFE;
-            pf.baseAngle     = (bomberSet == m_enemyHelen) ? 180.f : 0.f;
+            pf.baseAngle     = 180.f;
             for (int i = 0; i < 5; ++i) pf.texSet[i] = bomberSet[i];
         } else {
             pf.cols          = cfg.cols;
@@ -236,7 +236,7 @@ void EnemyWaveManager::startWave(int stageNumber) {
             sf.isRedSquadron = false; sf.powType = PowerUpType::SCORE_RED;
             sf.speedMult = cfg.speedMult * 2.4f;
             sf.noFire = true;
-            sf.baseAngle = 0.f;
+            sf.baseAngle = 180.f;
             for (int i = 0; i < 5; ++i) sf.texSet[i] = m_enemyBlack[i];
             m_pendingQueue.push_back(sf);
         }
@@ -264,6 +264,7 @@ void EnemyWaveManager::startWave(int stageNumber) {
             cf.powType = (k == 4) ? PowerUpType::YASHICHI : PowerUpType::SCORE_RED;
             cf.speedMult = cfg.speedMult;
             cf.isSniper = true;
+            cf.baseAngle = 180.f;
             for (int i = 0; i < 5; ++i) cf.texSet[i] = m_enemyRed[i];
             m_pendingQueue.push_back(cf);
         }
@@ -282,6 +283,7 @@ void EnemyWaveManager::startWave(int stageNumber) {
             kf.isRedSquadron = false;
             kf.powType       = PowerUpType::EXTRA_LOOP;
             kf.speedMult     = cfg.speedMult;
+            kf.baseAngle     = 180.f;
             for (int i = 0; i < 5; ++i) kf.texSet[i] = m_enemyKamikaze;
             m_pendingQueue.push_back(kf);
         }
@@ -297,7 +299,7 @@ void EnemyWaveManager::startWave(int stageNumber) {
         vf.isRedSquadron = true;
         vf.powType       = PowerUpType::SCORE_RED;
         vf.speedMult     = cfg.speedMult;
-        vf.baseAngle     = 180.f;  // south-facing sprite
+        vf.baseAngle     = 180.f;
         for (int i = 0; i < 5; ++i) vf.texSet[i] = m_enemyVal;
         m_pendingQueue.push_back(vf);
     }
