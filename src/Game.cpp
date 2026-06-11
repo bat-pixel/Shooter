@@ -765,7 +765,9 @@ void Game::renderCarrierLanding() {
         float pw2 = pw * scale, ph2 = ph * scale;
         float px = LOGICAL_W * 0.5f - pw2 * 0.5f;
         SDL_FRect planeDst = {px, m_landingPlaneY, pw2, ph2};
-        SDL_RenderTexture(m_renderer, planeTex, nullptr, &planeDst);
+        // Sprite is south-facing; rotate 180° so nose points up toward the carrier
+        SDL_RenderTextureRotated(m_renderer, planeTex, nullptr, &planeDst,
+                                 180.0, nullptr, SDL_FLIP_NONE);
     }
 
     // "MISSION COMPLETE" banner — pops in after plane has climbed onto screen
