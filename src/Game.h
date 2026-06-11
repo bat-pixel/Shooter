@@ -1,6 +1,5 @@
 #pragma once
 #include <SDL3/SDL.h>
-#include <SDL3_mixer/SDL_mixer.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <vector>
 #include <memory>
@@ -32,6 +31,7 @@ class Game {
 public:
     bool init();
     void run();
+    void stepFrame(); // called by the Emscripten main-loop callback
     void shutdown();
 
 private:
@@ -64,10 +64,11 @@ private:
     // Returns the appropriate island sprite set for a given campaign bgIndex
     std::vector<SDL_Texture*> islandsForCampaign(int bgIdx) const;
 
-    SDL_Window*   m_window   = nullptr;
-    SDL_Renderer* m_renderer = nullptr;
-    bool          m_running  = false;
+    SDL_Window*   m_window    = nullptr;
+    SDL_Renderer* m_renderer  = nullptr;
+    bool          m_running   = false;
     std::string   m_basePath;
+    Uint64        m_lastTicks = 0; // used by stepFrame() for Emscripten builds
 
     GameState m_state = GameState::MENU;
 

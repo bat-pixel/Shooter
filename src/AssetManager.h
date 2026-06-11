@@ -1,6 +1,8 @@
 #pragma once
 #include <SDL3/SDL.h>
+#ifndef __EMSCRIPTEN__
 #include <SDL3_image/SDL_image.h>
+#endif
 #include <SDL3_ttf/SDL_ttf.h>
 #include <string>
 #include <unordered_map>

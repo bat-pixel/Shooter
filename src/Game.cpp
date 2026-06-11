@@ -5,7 +5,9 @@
 #include "StageManager.h"
 #include "Constants.h"
 #include <SDL3/SDL.h>
+#ifndef __EMSCRIPTEN__
 #include <SDL3_image/SDL_image.h>
+#endif
 #include <SDL3_ttf/SDL_ttf.h>
 #include <algorithm>
 #include <cmath>
@@ -14,6 +16,10 @@
 #include <fstream>
 #include <string>
 #include <array>
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 // -----------------------------------------------------------------------
 bool Game::init() {
@@ -167,7 +173,8 @@ bool Game::init() {
 
     loadHighScore();
 
-    m_running = true;
+    m_running   = true;
+    m_lastTicks = SDL_GetTicks();
     return true;
 }
 
@@ -184,6 +191,26 @@ void Game::run() {
         update(dt);
         render();
     }
+}
+
+// -----------------------------------------------------------------------
+// Called once per browser frame by emscripten_set_main_loop().
+void Game::stepFrame() {
+    Uint64 now = SDL_GetTicks();
+    float dt = (now - m_lastTicks) / 1000.0f;
+    m_lastTicks = now;
+    if (dt > MAX_DT) dt = MAX_DT;
+
+    handleEvents();
+    update(dt);
+    render();
+
+#ifdef __EMSCRIPTEN__
+    if (!m_running) {
+        shutdown();
+        emscripten_cancel_main_loop();
+    }
+#endif
 }
 
 // -----------------------------------------------------------------------
@@ -1057,16 +1084,32 @@ void Game::resetToMenu() {
 }
 
 void Game::loadHighScore() {
+#ifdef __EMSCRIPTEN__
+    // localStorage is synchronous and persists across sessions in the browser.
+    int val = EM_ASM_INT({
+        var v = localStorage.getItem('skyfire_highscore');
+        return v ? parseInt(v, 10) : 0;
+    });
+    if (val > 0)
+        StageManager::get().updateHighScore(val);
+#else
     std::ifstream f(m_basePath + "highscore.dat");
     int val = 0;
     if (f >> val)
         StageManager::get().updateHighScore(val);
+#endif
 }
 
 void Game::saveHighScore() {
+#ifdef __EMSCRIPTEN__
+    EM_ASM({
+        localStorage.setItem('skyfire_highscore', $0);
+    }, StageManager::get().highScore());
+#else
     if (m_basePath.empty()) return;
     std::ofstream f(m_basePath + "highscore.dat", std::ios::trunc);
     f << StageManager::get().highScore() << "\n";
+#endif
 }
 
 void Game::resetPlayer() {

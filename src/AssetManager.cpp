@@ -1,6 +1,13 @@
 #include "AssetManager.h"
 #include <SDL3/SDL.h>
 
+#ifdef __EMSCRIPTEN__
+#define STBI_ONLY_PNG
+#define STBI_ONLY_JPEG
+#define STB_IMAGE_IMPLEMENTATION
+#include "vendor/stb_image.h"
+#endif
+
 AssetManager& AssetManager::get() {
     static AssetManager instance;
     return instance;
@@ -23,7 +30,25 @@ SDL_Texture* AssetManager::texture(const std::string& rel) {
     if (it != m_textures.end()) return it->second;
 
     std::string full = m_base + rel;
-    SDL_Texture* t = IMG_LoadTexture(m_renderer, full.c_str());
+    SDL_Texture* t = nullptr;
+
+#ifdef __EMSCRIPTEN__
+    // stb_image loads PNG/JPEG as RGBA bytes (R,G,B,A in memory order),
+    // which matches SDL_PIXELFORMAT_RGBA32 on little-endian (Emscripten/WASM).
+    int w, h, ch;
+    unsigned char* px = stbi_load(full.c_str(), &w, &h, &ch, 4);
+    if (px) {
+        SDL_Surface* surf = SDL_CreateSurfaceFrom(w, h, SDL_PIXELFORMAT_RGBA32, px, w * 4);
+        if (surf) {
+            t = SDL_CreateTextureFromSurface(m_renderer, surf);
+            SDL_DestroySurface(surf);
+        }
+        stbi_image_free(px);
+    }
+#else
+    t = IMG_LoadTexture(m_renderer, full.c_str());
+#endif
+
     if (!t) {
         SDL_Log("AssetManager: failed to load texture '%s': %s",
                 full.c_str(), SDL_GetError());

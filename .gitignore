@@ -361,3 +361,10 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Emscripten / web build output
+build_web/
+
+# Test/CI artifacts
+.playwright-mcp/
+web_build_running.png
