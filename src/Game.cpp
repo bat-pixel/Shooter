@@ -11,6 +11,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
+#include <fstream>
 #include <string>
 #include <array>
 
@@ -39,7 +40,8 @@ bool Game::init() {
                                      LOGICAL_W, LOGICAL_H,
                                      SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
-    std::string base = SDL_GetBasePath();
+    m_basePath = SDL_GetBasePath();
+    std::string& base = m_basePath;
     AssetManager::get().init(m_renderer, base);
     AudioManager::get().init(base);
 
@@ -162,6 +164,8 @@ bool Game::init() {
     // m_menuBg already set above
 
     AudioManager::get().playMusic("assets/music/Skyfire Patrol intro.mp3");
+
+    loadHighScore();
 
     m_running = true;
     return true;
@@ -1035,6 +1039,7 @@ void Game::advanceStage() {
 
 void Game::resetToMenu() {
     StageManager::get().updateHighScore(m_score);
+    saveHighScore();
     m_score       = 0;
     m_level       = 1;
     m_landingTimer = 0.f;
@@ -1049,6 +1054,19 @@ void Game::resetToMenu() {
     m_clouds.clear();
     resetPlayer();
     AudioManager::get().stopMusic();
+}
+
+void Game::loadHighScore() {
+    std::ifstream f(m_basePath + "highscore.dat");
+    int val = 0;
+    if (f >> val)
+        StageManager::get().updateHighScore(val);
+}
+
+void Game::saveHighScore() {
+    if (m_basePath.empty()) return;
+    std::ofstream f(m_basePath + "highscore.dat", std::ios::trunc);
+    f << StageManager::get().highScore() << "\n";
 }
 
 void Game::resetPlayer() {
@@ -1081,6 +1099,7 @@ void Game::renderText(const std::string& text, float x, float y,
 
 // -----------------------------------------------------------------------
 void Game::shutdown() {
+    saveHighScore();
     m_player.reset();
     m_boss.reset();
     m_background.reset();

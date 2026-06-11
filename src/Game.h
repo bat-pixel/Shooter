@@ -56,6 +56,8 @@ private:
     void advanceStage();
     void resetToMenu();
     void resetPlayer();
+    void loadHighScore();
+    void saveHighScore();
     void renderText(const std::string& text, float x, float y,
                     SDL_Color col, int ptSize);
 
@@ -65,6 +67,7 @@ private:
     SDL_Window*   m_window   = nullptr;
     SDL_Renderer* m_renderer = nullptr;
     bool          m_running  = false;
+    std::string   m_basePath;
 
     GameState m_state = GameState::MENU;
 
