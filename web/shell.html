@@ -17,6 +17,9 @@
       overflow: hidden;
       font-family: 'Courier New', monospace;
       color: #aaa;
+      /* Prevent text selection during touch */
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     #canvas-wrap {
@@ -26,14 +29,14 @@
 
     canvas#canvas {
       display: block;
-      /* Keep 9:16 aspect, fill the viewport without overflow */
       width:  min(100vw, calc(100dvh * 9 / 16));
       height: min(100dvh, calc(100vw * 16 / 9));
       image-rendering: pixelated;
       image-rendering: crisp-edges;
-      touch-action: none;
+      touch-action: none; /* let SDL handle all touch */
     }
 
+    /* ── Loading overlay ── */
     #overlay {
       position: absolute;
       inset: 0;
@@ -41,15 +44,14 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: rgba(0,0,0,0.75);
+      background: rgba(0,0,0,0.80);
       gap: 16px;
       pointer-events: none;
     }
     #overlay.hidden { display: none; }
 
     .spinner {
-      width: 40px;
-      height: 40px;
+      width: 40px; height: 40px;
       border: 3px solid #333;
       border-top-color: #7af;
       border-radius: 50%;
@@ -58,54 +60,95 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     #progress-bar {
-      width: 200px;
-      height: 6px;
-      background: #222;
-      border-radius: 3px;
-      overflow: hidden;
+      width: 200px; height: 6px;
+      background: #222; border-radius: 3px; overflow: hidden;
     }
     #progress-fill {
-      height: 100%;
-      background: #7af;
-      border-radius: 3px;
-      width: 0%;
-      transition: width 0.2s;
+      height: 100%; background: #7af; border-radius: 3px;
+      width: 0%; transition: width 0.2s;
     }
-    #status-text {
-      font-size: 12px;
-      letter-spacing: 0.05em;
-      color: #666;
+    #status-text { font-size: 12px; letter-spacing: 0.05em; color: #666; }
+
+    /* ── Touch HUD ── */
+    /* Hidden until a touchstart is detected */
+    #touch-hud {
+      display: none;
+      position: absolute;
+      inset: 0;
+      pointer-events: none; /* let touches fall through to canvas by default */
+    }
+    #touch-hud.visible { display: block; }
+
+    .touch-btn {
+      position: absolute;
+      pointer-events: all;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      border: 2px solid rgba(255,255,255,0.30);
+      color: #fff;
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
+      /* Disable tap highlight and text select */
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      /* Pressed state handled in JS */
+      transition: background 0.08s;
+    }
+    .touch-btn.active {
+      background: rgba(255,255,255,0.35);
+    }
+
+    /* Loop / barrel-roll button — bottom right */
+    #btn-loop {
+      width: 72px; height: 72px;
+      bottom: 18px; right: 18px;
+      font-size: 26px;
+    }
+
+    /* Pause button — top right, smaller */
+    #btn-pause {
+      width: 46px; height: 46px;
+      top: 12px; right: 12px;
+      font-size: 18px;
     }
   </style>
 </head>
 <body>
   <div id="canvas-wrap">
     <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+
     <div id="overlay">
       <div class="spinner"></div>
       <div id="progress-bar"><div id="progress-fill"></div></div>
       <div id="status-text">Loading…</div>
     </div>
+
+    <div id="touch-hud">
+      <!-- Barrel roll — maps to X key -->
+      <button id="btn-loop"  class="touch-btn" aria-label="Barrel roll">⟳</button>
+      <!-- Pause — maps to P key -->
+      <button id="btn-pause" class="touch-btn" aria-label="Pause">⏸</button>
+    </div>
   </div>
 
   <script>
-    var statusEl   = document.getElementById('status-text');
-    var fillEl     = document.getElementById('progress-fill');
-    var overlayEl  = document.getElementById('overlay');
+    /* ── Loading progress ── */
+    var statusEl  = document.getElementById('status-text');
+    var fillEl    = document.getElementById('progress-fill');
+    var overlayEl = document.getElementById('overlay');
 
     var Module = {
       canvas: document.getElementById('canvas'),
 
       setStatus: function(msg) {
-        if (!msg) {
-          overlayEl.classList.add('hidden');
-          return;
-        }
-        // Parse "Downloading data... (N/M)" for the progress bar
+        if (!msg) { overlayEl.classList.add('hidden'); return; }
         var m = msg.match(/(\d+)\/(\d+)/);
-        if (m) {
-          fillEl.style.width = (100 * parseInt(m[1]) / parseInt(m[2])) + '%';
-        }
+        if (m) fillEl.style.width = (100 * parseInt(m[1]) / parseInt(m[2])) + '%';
         statusEl.textContent = msg.replace(/\([\d /]+\)/, '').trim();
       },
 
@@ -115,12 +158,46 @@
 
       print:    function(t) { console.log(t); },
       printErr: function(t) { console.error(t); },
-
-      // Suppress "exit(0)" from emscripten_cancel_main_loop
-      quit: function(code) {
-        if (code !== 0) console.error('Exit code', code);
-      }
+      quit: function(code) { if (code !== 0) console.error('Exit code', code); }
     };
+
+    /* ── Touch HUD ── */
+    var hud = document.getElementById('touch-hud');
+
+    // Reveal the HUD as soon as the user touches anything
+    window.addEventListener('touchstart', function() {
+      hud.classList.add('visible');
+    }, { once: true, passive: true });
+
+    // Helper: send a synthetic keyboard event to the window so SDL picks it up
+    function sdlKey(key, code, down) {
+      window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', {
+        key: key, code: code,
+        bubbles: true, cancelable: true
+      }));
+    }
+
+    // Wire up each button: touchstart → keydown, touchend/cancel → keyup
+    function bindBtn(id, key, code) {
+      var btn = document.getElementById(id);
+      btn.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        btn.classList.add('active');
+        sdlKey(key, code, true);
+      }, { passive: false });
+      btn.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        btn.classList.remove('active');
+        sdlKey(key, code, false);
+      }, { passive: false });
+      btn.addEventListener('touchcancel', function(e) {
+        btn.classList.remove('active');
+        sdlKey(key, code, false);
+      });
+    }
+
+    bindBtn('btn-loop',  'x', 'KeyX');
+    bindBtn('btn-pause', 'p', 'KeyP');
   </script>
   {{{ SCRIPT }}}
 </body>
