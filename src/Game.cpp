@@ -795,36 +795,23 @@ void Game::renderCarrierLanding() {
 }
 
 void Game::renderStageTally() {
-    // Dark background
+    // Full intro background — same as the menu
     if (m_menuBg) {
         SDL_FRect dst = {0, 0, (float)LOGICAL_W, (float)LOGICAL_H};
         SDL_RenderTexture(m_renderer, m_menuBg, nullptr, &dst);
     }
-    SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 180);
-    SDL_FRect box = {10, 160, 340, 300};
-    SDL_RenderFillRect(m_renderer, &box);
 
-    int stage = StageManager::get().currentStage();
-    std::string hdr = "STAGE " + std::to_string(stage) + " CLEAR";
-    renderText(hdr, LOGICAL_W * 0.5f - (float)(hdr.size() * 5), 175, {255, 255, 100, 255}, 22);
+    // Bottom panel — same style as the main menu
+    float panelH = 210.f;
+    float panelY = LOGICAL_H - panelH;
+    SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 185);
+    SDL_FRect panel = {0, panelY, (float)LOGICAL_W, panelH};
+    SDL_RenderFillRect(m_renderer, &panel);
 
-    // Shooting %
+    // Bonuses — add once
     int pct = (m_stageTotalEnemies > 0)
               ? (m_stageKillCount * 100 / m_stageTotalEnemies) : 0;
-    std::string pctTxt = "SHOOTING DOWN  " + std::to_string(pct) + "%";
-    renderText(pctTxt, 30, 230, {255, 255, 255, 255}, 16);
-
-    // Loop bonus
     int loopBonus = m_player->loopsRemaining() * SCORE_LOOP_BONUS;
-    std::string loopTxt = "LOOP BONUS  " + std::to_string(m_player->loopsRemaining())
-                        + " x 1000 = " + std::to_string(loopBonus);
-    renderText(loopTxt, 30, 270, {255, 255, 255, 255}, 16);
-
-    // Perfect bonus
-    if (pct == 100)
-        renderText("SPECIAL BONUS  50000", 30, 310, {255, 200, 0, 255}, 16);
-
-    // Add bonuses exactly once
     if (!m_tallyBonusAdded) {
         m_tallyBonusAdded = true;
         m_score += loopBonus;
@@ -832,8 +819,45 @@ void Game::renderStageTally() {
         AudioManager::get().playSound("assets/sounds/stage_clear.mp3");
     }
 
-    renderText("PRESS ENTER TO CONTINUE", LOGICAL_W * 0.5f - 110, 390,
-               {200, 200, 200, 255}, 13);
+    float y = panelY + 14.f;
+    float cx = LOGICAL_W * 0.5f;
+
+    // Header
+    int stage = StageManager::get().currentStage();
+    std::string hdr = "STAGE " + std::to_string(stage) + " CLEAR";
+    renderText(hdr, cx - (float)(hdr.size() * 6), y, {255, 255, 100, 255}, 22);
+    y += 36.f;
+
+    // Stats
+    std::string pctTxt = "SHOOTING DOWN  " + std::to_string(pct) + "%";
+    renderText(pctTxt, 28.f, y, {255, 255, 255, 255}, 15);
+    y += 26.f;
+
+    std::string loopTxt = "LOOP BONUS  " + std::to_string(m_player->loopsRemaining())
+                        + " x 1000 = " + std::to_string(loopBonus);
+    renderText(loopTxt, 28.f, y, {255, 255, 255, 255}, 15);
+    y += 26.f;
+
+    if (pct == 100) {
+        renderText("SPECIAL BONUS  50000", 28.f, y, {255, 200, 0, 255}, 15);
+        y += 26.f;
+    }
+
+    // Pulse "PRESS ENTER"
+    float pulse = 0.5f + 0.5f * std::sinf(m_tallyTimer * 3.5f);
+    Uint8 pa = (Uint8)(160 + 95 * pulse);
+    SDL_SetRenderDrawColor(m_renderer, 255, 220, 0, pa);
+    SDL_FRect enterBox = {28.f, LOGICAL_H - 52.f, 64.f, 22.f};
+    SDL_RenderRect(m_renderer, &enterBox);
+    renderText("ENTER", 34.f, LOGICAL_H - 50.f, {255, 220, 0, pa}, 11);
+    renderText("CONTINUE", 104.f, LOGICAL_H - 50.f, {255, 220, 0, pa}, 16);
+
+    // T — level select
+    SDL_SetRenderDrawColor(m_renderer, 180, 180, 180, 180);
+    SDL_FRect tBox = {28.f, LOGICAL_H - 22.f, 22.f, 18.f};
+    SDL_RenderRect(m_renderer, &tBox);
+    renderText("T", 34.f, LOGICAL_H - 21.f, {180, 180, 180, 200}, 11);
+    renderText("TRAINING / LEVEL SELECT", 60.f, LOGICAL_H - 21.f, {180, 180, 180, 200}, 11);
 }
 
 void Game::renderGameOver() {
