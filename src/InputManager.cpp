@@ -70,30 +70,26 @@ void InputManager::handleKey(SDL_Keycode key, bool down) {
 
 void InputManager::handleFinger(const SDL_Event& e) {
     if (e.type == SDL_EVENT_FINGER_DOWN) {
-        m_touching    = true;
-        m_touchStartX = e.tfinger.x * LOGICAL_W;
-        m_touchStartY = e.tfinger.y * LOGICAL_H;
+        m_touching     = true;
+        m_touchX       = e.tfinger.x * LOGICAL_W;
+        m_touchY       = e.tfinger.y * LOGICAL_H;
+        m_touchStartX  = m_touchX;
+        m_touchStartY  = m_touchY;
         m_pressed[Action::FIRE]    = true;
         m_held[Action::FIRE]       = true;
-        // Also emit CONFIRM so tapping advances menus/tally screens.
-        // In-game, CONFIRM is unused by gameplay so this has no side-effect.
+        // Tapping also counts as CONFIRM so menus/tally screens advance.
         m_pressed[Action::CONFIRM] = true;
         m_held[Action::CONFIRM]    = true;
     } else if (e.type == SDL_EVENT_FINGER_MOTION) {
-        float curX = e.tfinger.x * LOGICAL_W;
-        float curY = e.tfinger.y * LOGICAL_H;
-        float dx = curX - m_touchStartX;
-        float dy = curY - m_touchStartY;
-        float deadzone = 10.f;
-        m_axisX = (SDL_fabsf(dx) > deadzone) ? SDL_clamp(dx / 80.f, -1.f, 1.f) : 0.f;
-        m_axisY = (SDL_fabsf(dy) > deadzone) ? SDL_clamp(dy / 80.f, -1.f, 1.f) : 0.f;
+        m_touchX = e.tfinger.x * LOGICAL_W;
+        m_touchY = e.tfinger.y * LOGICAL_H;
     } else if (e.type == SDL_EVENT_FINGER_UP) {
         m_touching = false;
         m_axisX = m_axisY = 0;
-        m_held[Action::FIRE]       = false;
-        m_released[Action::FIRE]   = true;
-        m_held[Action::CONFIRM]    = false;
-        m_released[Action::CONFIRM]= true;
+        m_held[Action::FIRE]        = false;
+        m_released[Action::FIRE]    = true;
+        m_held[Action::CONFIRM]     = false;
+        m_released[Action::CONFIRM] = true;
     }
 }
 

@@ -27,10 +27,17 @@ void Player::update(float dt) {
     if (!m_active) return;
     auto& input = InputManager::get();
 
-    float ax = input.axisX();
-    float ay = input.axisY();
-    m_x += ax * PLAYER_SPEED * dt;
-    m_y += ay * PLAYER_SPEED * dt;
+    if (input.isTouching()) {
+        // Direct position: ship center-X tracks finger, bottom edge 8px above it.
+        // Zero latency — no drag accumulation needed.
+        m_x = input.touchX() - m_w * 0.5f;
+        m_y = input.touchY() - m_h - 8.f;
+    } else {
+        float ax = input.axisX();
+        float ay = input.axisY();
+        m_x += ax * PLAYER_SPEED * dt;
+        m_y += ay * PLAYER_SPEED * dt;
+    }
     m_x = std::clamp(m_x, 0.f, (float)LOGICAL_W - m_w);
     m_y = std::clamp(m_y, 0.f, (float)LOGICAL_H - m_h);
 
