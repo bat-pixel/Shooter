@@ -48,5 +48,6 @@ retro bullet-hell finale, no vocals
 ### Notes
 - Target length 1:30–2:30; the track loops in-game.
 - Export at a consistent loudness with the other `bgm_*.mp3` files.
-- Until you replace it, `bgm_marshall.mp3` is a copy of `bgm_stage2.mp3` so the
-  campaign already has audio distinct from Midway.
+- DONE: `bgm_marshall.mp3` is now the real track "Lagoon Siege (Marshall Sector)"
+  (source kept in `assets/music/`). The boss cue `bgm_boss_marshall.mp3` is still a
+  placeholder pending its own track.
