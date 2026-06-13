@@ -45,6 +45,20 @@ retro bullet-hell finale, no vocals
 
 ---
 
+## Campaign 3 — Attu (Aleutians)  →  `bgm_attu.mp3`  (DONE)
+Cold, foggy North Pacific. Now using the track "Skyfire Patrol: Ascendant"
+(source in `assets/music/`), wired for bgIndex 2 in `Game::musicForCurrentStage()`.
+
+Reference style prompt (for future regeneration):
+```
+cold dark electro-industrial synthwave, arcade techno, glacial metallic leads,
+icy detuned pads, militaristic gated snare, relentless distorted bassline,
+blizzard atmosphere, distant foghorn and sonar pings, bleak and oppressive,
+160 BPM, instrumental, retro shoot-em-up, high tension, no vocals
+```
+
+---
+
 ### Notes
 - Target length 1:30–2:30; the track loops in-game.
 - Export at a consistent loudness with the other `bgm_*.mp3` files.

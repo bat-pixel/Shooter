@@ -1052,7 +1052,8 @@ const char* Game::musicForCurrentStage() const {
         return def.bgIndex == 1 ? "assets/sounds/bgm_boss_marshall.mp3"
                                 : "assets/sounds/bgm_boss.mp3";
     if (def.bgIndex == 1)   return "assets/sounds/bgm_marshall.mp3";  // Campaign 2
-    if (def.bgIndex >= 2)   return "assets/sounds/bgm_stage2.mp3";
+    if (def.bgIndex == 2)   return "assets/sounds/bgm_attu.mp3";      // Campaign 3
+    if (def.bgIndex >= 3)   return "assets/sounds/bgm_stage2.mp3";
     return "assets/sounds/bgm_stage.mp3";                            // Midway / default
 }
 
