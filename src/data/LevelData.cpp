@@ -15,14 +15,21 @@ static const std::vector<LevelObject> s_area0 = {
     { TerrainType::CARRIER_SHIP,  2480, 140 },
 };
 
+// Area 1 — Marshall Islands: turquoise lagoons, sandy atolls and a busy enemy
+// supply line. Boats patrol the water between the coral rings.
 static const std::vector<LevelObject> s_area1 = {
     { TerrainType::SMALL_ISLAND,   200,  80 },
-    { TerrainType::CARRIER_SHIP,   560, 220 },
-    { TerrainType::BIG_ISLAND,     880, 120 },
-    { TerrainType::SMALL_ISLAND,  1200, 290 },
-    { TerrainType::CARRIER_SHIP,  1520, 160 },
-    { TerrainType::BIG_ISLAND,    1840,  60 },
-    { TerrainType::CARRIER_SHIP,  2160, 240 },
+    { TerrainType::BOAT,           420, 250 },
+    { TerrainType::CARRIER_SHIP,   600, 200 },
+    { TerrainType::BOAT,           820,  70 },
+    { TerrainType::BIG_ISLAND,     980, 130 },
+    { TerrainType::SMALL_ISLAND,  1240, 300 },
+    { TerrainType::BOAT,          1420, 150 },
+    { TerrainType::BOAT,          1520, 280 },
+    { TerrainType::CARRIER_SHIP,  1700, 160 },
+    { TerrainType::BIG_ISLAND,    1980,  60 },
+    { TerrainType::BOAT,          2180, 240 },
+    { TerrainType::SMALL_ISLAND,  2360, 110 },
 };
 
 static const std::vector<LevelObject> s_area2 = {

@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 
-enum class TerrainType { SMALL_ISLAND, BIG_ISLAND, CARRIER_SHIP };
+enum class TerrainType { SMALL_ISLAND, BIG_ISLAND, CARRIER_SHIP, BOAT };
 
 struct LevelObject {
     TerrainType type;

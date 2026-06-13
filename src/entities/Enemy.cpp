@@ -56,6 +56,14 @@ void Enemy::update(float dt) {
         m_renderAngle = 0.f;
         break;
 
+    case EnemyPattern::RISE:
+        // Rear attacker — sweeps up from the bottom of the screen with a gentle
+        // weave. baseAngle 0 leaves the sprite pointing "up" (its travel heading).
+        m_y -= m_velY * dt;
+        m_x  = m_initialX + std::sinf(m_time * 2.2f) * 40.0f;
+        m_renderAngle = 0.f;
+        break;
+
     case EnemyPattern::DIVE: {
         if (!m_inFormation) {
             // Phase 1 — fly to formation target
@@ -218,7 +226,11 @@ void Enemy::update(float dt) {
 
     m_fireTimer += dt;
 
-    if (m_y > LOGICAL_H + m_h) m_active = false;
+    if (m_pattern == EnemyPattern::RISE) {
+        if (m_y < -m_h) m_active = false;          // flew off the top
+    } else if (m_y > LOGICAL_H + m_h) {
+        m_active = false;                          // flew off the bottom
+    }
 }
 
 bool Enemy::hit() {
@@ -241,7 +253,11 @@ bool Enemy::tryFire(float /*dt*/) {
 void Enemy::render(SDL_Renderer* renderer) {
     if (!m_active || !m_tex) return;
     SDL_FRect dst = {m_x, m_y, m_w, m_h};
-    double totalAngle = (double)(m_renderAngle + m_baseAngle);
+    // Only nimble single-seat fighters bank/roll with their flight path. Heavy
+    // aircraft (bombers, dive-bombers, flying boats) hold a level attitude — they
+    // keep their fixed orientation (m_baseAngle) but never spin like fighters.
+    double dynamicAngle = (m_type == EnemyType::SMALL) ? (double)m_renderAngle : 0.0;
+    double totalAngle = dynamicAngle + (double)m_baseAngle;
     if (totalAngle != 0.0) {
         SDL_RenderTextureRotated(renderer, m_tex, nullptr, &dst,
                                  totalAngle, nullptr, SDL_FLIP_NONE);

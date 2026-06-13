@@ -64,6 +64,9 @@ private:
     // Returns the appropriate island sprite set for a given campaign bgIndex
     std::vector<SDL_Texture*> islandsForCampaign(int bgIdx) const;
 
+    // Music track for the current stage (campaign- and boss-aware)
+    const char* musicForCurrentStage() const;
+
     SDL_Window*   m_window    = nullptr;
     SDL_Renderer* m_renderer  = nullptr;
     bool          m_running   = false;
@@ -116,6 +119,7 @@ private:
 
     // Island terrain — categorized by environment type
     std::vector<SDL_Texture*> m_terrainSmallTextures;
+    std::vector<SDL_Texture*> m_boatVariants;   // patrol craft drifting in open water
     std::vector<SDL_Texture*> m_islandsPalm;
     std::vector<SDL_Texture*> m_islandsAtoll;
     std::vector<SDL_Texture*> m_islandsVolcano;

@@ -156,6 +156,14 @@ bool Game::init() {
     if (SDL_Texture* t = am.texture("assets/PNG/Terrain/small_island.png"))
         m_terrainSmallTextures.push_back(t);
 
+    // Boats — enemy patrol craft drifting in open water (destructible terrain)
+    auto loadBoat = [&](const char* path) {
+        if (SDL_Texture* t = am.texture(path)) m_boatVariants.push_back(t);
+    };
+    loadBoat("assets/PNG/Terrain/boat_destroyer.png");
+    loadBoat("assets/PNG/Terrain/boat_transport.png");
+    loadBoat("assets/PNG/Terrain/boat_gunboat.png");
+
     // HUD — use P-38 sprite as life icon
     TTF_Font* font    = am.font("assets/Bonus/kenvector_future.ttf", 16);
     SDL_Texture* lifeIcon = wingmanTex ? wingmanTex : shipTex;
@@ -277,12 +285,12 @@ void Game::handleEvents() {
             m_worldY = 0;
             m_waves.resetKillStats();
             { int bg = StageManager::get().currentDef().bgIndex;
-              m_levelObjects.startStage(bg, islandsForCampaign(bg), m_terrainBigTex, m_terrainCarrierTex);
+              m_levelObjects.startStage(bg, islandsForCampaign(bg), m_terrainBigTex, m_terrainCarrierTex, m_boatVariants);
               m_background->setTextures({m_campaignBg[bg]}); }
             m_state = GameState::PLAYING;
             m_waves.startWave(StageManager::get().currentStage());
             m_player->setGodMode(true);
-            AudioManager::get().playMusic("assets/sounds/bgm_stage.mp3");
+            AudioManager::get().playMusic(musicForCurrentStage());
         }
     }
 
@@ -292,11 +300,11 @@ void Game::handleEvents() {
         m_worldY = 0;
         m_waves.resetKillStats();
         { int bg = StageManager::get().currentDef().bgIndex;
-          m_levelObjects.startStage(bg, islandsForCampaign(bg), m_terrainBigTex, m_terrainCarrierTex);
+          m_levelObjects.startStage(bg, islandsForCampaign(bg), m_terrainBigTex, m_terrainCarrierTex, m_boatVariants);
           m_background->setTextures({m_campaignBg[bg]}); }
         m_state = GameState::PLAYING;
         m_waves.startWave(StageManager::get().currentStage());
-        AudioManager::get().playMusic("assets/sounds/bgm_stage.mp3");
+        AudioManager::get().playMusic(musicForCurrentStage());
     }
 
     // Allow skipping the landing cutscene with Enter
@@ -1013,7 +1021,7 @@ void Game::spawnBoss() {
     else                                             bossTex = m_bossTex;
     m_boss = std::make_unique<Boss>(bossTex, bossIndex, flipV);
     AudioManager::get().playSound("assets/sounds/boss_warning.mp3");
-    AudioManager::get().playMusic("assets/sounds/bgm_boss.mp3");
+    AudioManager::get().playMusic(musicForCurrentStage());
 }
 
 std::vector<SDL_Texture*> Game::islandsForCampaign(int bgIdx) const {
@@ -1038,6 +1046,16 @@ std::vector<SDL_Texture*> Game::islandsForCampaign(int bgIdx) const {
     return result;
 }
 
+const char* Game::musicForCurrentStage() const {
+    const StageDef& def = StageManager::get().currentDef();
+    if (def.hasBoss)                       // boss cue (Ayako II gets a dedicated track)
+        return def.bgIndex == 1 ? "assets/sounds/bgm_boss_marshall.mp3"
+                                : "assets/sounds/bgm_boss.mp3";
+    if (def.bgIndex == 1)   return "assets/sounds/bgm_marshall.mp3";  // Campaign 2
+    if (def.bgIndex >= 2)   return "assets/sounds/bgm_stage2.mp3";
+    return "assets/sounds/bgm_stage.mp3";                            // Midway / default
+}
+
 void Game::advanceStage() {
     StageManager::get().advance();
     ++m_level;
@@ -1045,21 +1063,14 @@ void Game::advanceStage() {
     m_worldY = 0;
     int area = StageManager::get().currentDef().bgIndex;
     m_levelObjects.startStage(area,
-        islandsForCampaign(area), m_terrainBigTex, m_terrainCarrierTex);
+        islandsForCampaign(area), m_terrainBigTex, m_terrainCarrierTex, m_boatVariants);
     m_background->setTextures({m_campaignBg[area]});
 
     m_player->resetForNewStage();
     m_waves.resetKillStats();
     m_waves.startWave(StageManager::get().currentStage());
 
-    const char* music;
-    if (StageManager::get().currentDef().hasBoss)
-        music = "assets/sounds/bgm_boss.mp3";
-    else if (area >= 2)
-        music = "assets/sounds/bgm_stage2.mp3";
-    else
-        music = "assets/sounds/bgm_stage.mp3";
-    AudioManager::get().playMusic(music);
+    AudioManager::get().playMusic(musicForCurrentStage());
 
     m_state = GameState::PLAYING;
 }

@@ -213,6 +213,36 @@ void EnemyWaveManager::startWave(int stageNumber) {
         }
     }
 
+    // Marshall campaign (stages 28-25): a signature dual-flank ARC sweep, plus an
+    // extra LOOP_DIVE ambush on the tougher stages. Kept deliberately sparse and
+    // well-spaced so the screen never gets crowded with overlapping formations.
+    if (stageNumber >= 25 && stageNumber <= 28) {
+        int arcPairs = 1 + (28 - stageNumber) / 2;  // 28:1, 27:1, 26:2, 25:2
+        for (int k = 0; k < arcPairs; ++k) {
+            float t = waveLen * 0.30f + k * 5.0f;   // wide spacing — one pair on screen at a time
+            PendingFormation lf, rf;
+            lf.delay = t; lf.cols = 4; lf.type = EnemyType::SMALL;
+            lf.pattern = EnemyPattern::ARC;
+            lf.isRedSquadron = (k % 2 == 0); lf.powType = PowerUpType::EXTRA_LOOP;
+            lf.speedMult = cfg.speedMult; lf.baseAngle = 180.f; lf.forceArcSide = 0;  // left
+            for (int i = 0; i < 5; ++i) lf.texSet[i] = m_enemyBlue[i];
+            rf = lf; rf.forceArcSide = 1; rf.isRedSquadron = false;  // right, same delay
+            m_pendingQueue.push_back(lf);
+            m_pendingQueue.push_back(rf);
+        }
+        // Extra LOOP_DIVE ambush on the later, harder Marshall stages only
+        if (stageNumber <= 26) {
+            PendingFormation ld;
+            ld.delay = waveLen * 0.7f;
+            ld.cols = 4; ld.type = EnemyType::SMALL;
+            ld.pattern = EnemyPattern::LOOP_DIVE;
+            ld.isRedSquadron = true; ld.powType = PowerUpType::SCORE_RED;
+            ld.speedMult = cfg.speedMult * 1.1f; ld.baseAngle = 180.f;
+            for (int i = 0; i < 5; ++i) ld.texSet[i] = m_enemyZeroGreen[i];
+            m_pendingQueue.push_back(ld);
+        }
+    }
+
     // Stage 18 — Double-Decker Bombers: extra wide 6-bomber formation
     if (stageNumber == 18) {
         PendingFormation dd;
@@ -304,6 +334,28 @@ void EnemyWaveManager::startWave(int stageNumber) {
         m_pendingQueue.push_back(vf);
     }
 
+    // Rear attackers — from the Marshall campaign (stage 28) onward, fighter squads
+    // sweep up from the bottom of the screen behind the player. They fire aimed shots,
+    // so the player must watch their back. Count grows as the campaign escalates.
+    if (stageNumber <= 28 && !bonus) {
+        int rearCount = 1 + (28 - stageNumber) / 9;   // 1..3 across the remaining game
+        rearCount = std::min(rearCount, 3);
+        for (int k = 0; k < rearCount; ++k) {
+            PendingFormation rf;
+            rf.delay         = waveLen * (0.30f + 0.45f * (rearCount > 1 ? (float)k / (rearCount - 1) : 0.f));
+            rf.cols          = 3;
+            rf.type          = EnemyType::SMALL;
+            rf.pattern       = EnemyPattern::RISE;
+            rf.isRedSquadron = (k % 2 == 1);
+            rf.powType       = PowerUpType::SCORE_RED;
+            rf.speedMult     = cfg.speedMult;
+            rf.baseAngle     = 0.f;     // point "up" — their direction of travel
+            rf.isSniper      = true;    // aimed shots, since they approach from behind
+            for (int i = 0; i < 5; ++i) rf.texSet[i] = m_enemyRed[i];
+            m_pendingQueue.push_back(rf);
+        }
+    }
+
     // UFO mid-wave from Marshall campaign onward (including bonus stages — bonus target!)
     if (stageNumber <= 28 && m_ufoTex) {
         PendingFormation uf;
@@ -362,6 +414,22 @@ void EnemyWaveManager::spawnFormation(const PendingFormation& pf) {
         for (int c = 0; c < pf.cols; ++c) {
             float tx = edgeX + c * xStep;
             float ty = -50.f - c * 35.f;
+            auto e = std::make_unique<Enemy>(tx, ty, pf.type, pf.pattern, pf.texSet[c % 5],
+                                             nullptr, pf.speedMult);
+            applyBase(e.get());
+            int idx = (int)m_enemies.size();
+            f.enemyIndices.push_back(idx);
+            m_enemies.push_back(std::move(e));
+            m_enemyFormation.push_back(formIdx);
+            ++m_aliveCount;
+            ++m_totalSpawned;
+        }
+    } else if (pf.pattern == EnemyPattern::RISE) {
+        // Rear attackers enter from below the screen and climb upward
+        float spacingX = (LOGICAL_W - 60.f) / std::max(pf.cols, 1);
+        for (int c = 0; c < pf.cols; ++c) {
+            float tx = 30.f + c * spacingX;
+            float ty = (float)LOGICAL_H + 50.f + c * 20.f;
             auto e = std::make_unique<Enemy>(tx, ty, pf.type, pf.pattern, pf.texSet[c % 5],
                                              nullptr, pf.speedMult);
             applyBase(e.get());
