@@ -49,6 +49,11 @@ bool Boss::tryFire(float playerX, float playerY,
     else if (m_hp <= m_maxHp / 2)  fireRate = 0.28f;
     else                            fireRate = 0.45f;
 
+    // Later bosses fire faster than earlier ones. Ayako II (index 2) is noticeably
+    // quicker than the first boss, and the trend continues through the campaign.
+    float rateScale = std::max(0.55f, 1.0f - (m_bossIndex - 1) * 0.07f);
+    fireRate *= rateScale;
+
     if (m_fireTimer < fireRate) return false;
     m_fireTimer = 0;
 

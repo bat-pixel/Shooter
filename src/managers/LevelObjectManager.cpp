@@ -5,12 +5,15 @@
 void LevelObjectManager::startStage(int area,
                                      const std::vector<SDL_Texture*>& smallVariants,
                                      SDL_Texture* texBig,
-                                     SDL_Texture* texCarrier) {
+                                     SDL_Texture* texCarrier,
+                                     const std::vector<SDL_Texture*>& boatVariants) {
     m_objects.clear();
     m_scriptIdx       = 0;
     m_loopOffset      = 0;
     m_smallVariantIdx = 0;
+    m_boatVariantIdx  = 0;
     m_smallVariants   = smallVariants;
+    m_boatVariants    = boatVariants;
     m_texBig          = texBig;
     m_texCarrier      = texCarrier;
 
@@ -50,6 +53,15 @@ void LevelObjectManager::update(float worldY, float dt) {
             break;
         case TerrainType::BIG_ISLAND:    tex = m_texBig;     hp = 0;  break;
         case TerrainType::CARRIER_SHIP:  tex = m_texCarrier; hp = 20; break;
+        case TerrainType::BOAT:
+            if (!m_boatVariants.empty()) {
+                tex = m_boatVariants[m_boatVariantIdx++ % (int)m_boatVariants.size()];
+                hp  = 10;  // destructible patrol craft — lighter than a carrier
+            } else if (!m_smallVariants.empty()) {  // fall back to a (static) island if no boats loaded
+                tex = m_smallVariants[m_smallVariantIdx++ % (int)m_smallVariants.size()];
+                hp  = 0;
+            }
+            break;
         }
 
         if (tex)

@@ -10,7 +10,8 @@ public:
     void startStage(int area,
                     const std::vector<SDL_Texture*>& smallVariants,
                     SDL_Texture* texBig,
-                    SDL_Texture* texCarrier);
+                    SDL_Texture* texCarrier,
+                    const std::vector<SDL_Texture*>& boatVariants = {});
     void update(float worldY, float dt);
     void render(SDL_Renderer* renderer);
     void clear();
@@ -24,8 +25,10 @@ private:
     float                                 m_loopOffset     = 0;
     float                                 m_loopSpan       = 0;
     int                                   m_smallVariantIdx = 0;
+    int                                   m_boatVariantIdx  = 0;
 
     std::vector<SDL_Texture*> m_smallVariants;
+    std::vector<SDL_Texture*> m_boatVariants;
     SDL_Texture*              m_texBig     = nullptr;
     SDL_Texture*              m_texCarrier = nullptr;
 };

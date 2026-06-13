@@ -3,7 +3,7 @@
 #include <SDL3/SDL.h>
 
 enum class EnemyType { SMALL, MEDIUM, LARGE, UFO };
-enum class EnemyPattern { STRAIGHT, SINE, DIVE, ARC, LOOP_DIVE, ZIGZAG };
+enum class EnemyPattern { STRAIGHT, SINE, DIVE, ARC, LOOP_DIVE, ZIGZAG, RISE };
 
 class Enemy : public BaseEntity {
 public:
